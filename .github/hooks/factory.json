@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      { "type": "command", "bash": "bash .github/hooks/scripts/log.sh sessionStart", "cwd": ".", "timeoutSec": 10 }
+    ],
+    "userPromptSubmitted": [
+      { "type": "command", "bash": "bash .github/hooks/scripts/log.sh userPromptSubmitted", "cwd": ".", "timeoutSec": 10 }
+    ],
+    "preToolUse": [
+      { "type": "command", "bash": "bash .github/hooks/scripts/guard.sh", "cwd": ".", "timeoutSec": 15 }
+    ],
+    "postToolUse": [
+      { "type": "command", "bash": "bash .github/hooks/scripts/log.sh postToolUse", "cwd": ".", "timeoutSec": 10 }
+    ],
+    "postToolUseFailure": [
+      { "type": "command", "bash": "bash .github/hooks/scripts/log.sh postToolUseFailure", "cwd": ".", "timeoutSec": 10 }
+    ],
+    "subagentStart": [
+      { "type": "command", "bash": "bash .github/hooks/scripts/log.sh subagentStart", "cwd": ".", "timeoutSec": 10 }
+    ],
+    "subagentStop": [
+      { "type": "command", "bash": "bash .github/hooks/scripts/log.sh subagentStop", "cwd": ".", "timeoutSec": 10 }
+    ],
+    "preCompact": [
+      { "type": "command", "bash": "bash .github/hooks/scripts/log.sh preCompact", "cwd": ".", "timeoutSec": 10 }
+    ],
+    "agentStop": [
+      { "type": "command", "bash": "bash .github/hooks/scripts/stop-gate.sh", "cwd": ".", "timeoutSec": 20 }
+    ],
+    "errorOccurred": [
+      { "type": "command", "bash": "bash .github/hooks/scripts/log.sh errorOccurred", "cwd": ".", "timeoutSec": 10 }
+    ],
+    "sessionEnd": [
+      { "type": "command", "bash": "bash .github/hooks/scripts/log.sh sessionEnd", "cwd": ".", "timeoutSec": 10 }
+    ]
+  }
+}

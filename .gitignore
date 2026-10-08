@@ -1,0 +1,3 @@
+# Agent factory: local logs and scratch space
+.agent-logs/
+.agent-work/
