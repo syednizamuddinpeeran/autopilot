@@ -45,8 +45,11 @@ for f in "${files[@]}"; do
   echo "added: $f"
 done
 
+gi="$dst/.gitignore"
+# Make sure the last existing line ends with a newline before appending.
+[[ -s "$gi" && -n "$(tail -c1 "$gi")" ]] && echo >> "$gi"
 for line in ".agent-logs/" ".agent-work/"; do
-  grep -qxF "$line" "$dst/.gitignore" 2>/dev/null || echo "$line" >> "$dst/.gitignore"
+  grep -qxF "$line" "$gi" 2>/dev/null || echo "$line" >> "$gi"
 done
 chmod +x "$dst"/.github/hooks/scripts/*.sh "$dst"/scripts/factory/*.sh
 

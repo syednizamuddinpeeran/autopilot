@@ -10,6 +10,8 @@ mkdir -p .github scripts
 cp -r "$src/.github/hooks" .github/
 cp -r "$src/scripts/factory" scripts/
 printf '.agent-logs/\n.agent-work/\n' > .gitignore
+# Neutral config: the self-test must not run the project's real checks in this throwaway repo.
+printf 'BASE_BRANCH="main"\nSETUP_CMD=""\nFORMAT_CHECK_CMD=""\nLINT_CMD=""\nTYPECHECK_CMD=""\nTEST_CMD=""\nBUILD_CMD=""\nALLOW_NO_CHECKS=0\n' > scripts/factory/commands.env
 git add -A && git commit -qm init
 git checkout -qb agent/issue-1-test
 
