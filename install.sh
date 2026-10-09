@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Install the agent factory into an existing git repository.
 #
-#   ./install.sh <target-repo> [--repo github] [--force]
+#   ./install.sh <target-repo> [--repo github|local] [--force]
 #
-#   --repo   repository type: github (issues → PRs, cloud agent + CI)   [default: github]
+#   --repo   repository type                                            [default: github]
+#              github  GitHub issue → pull request (cloud agent or local CLI, CI, branch protection)
+#              local   task file → reviewed local branch, merged with accept.sh (no remote needed)
 #   --force  overwrite files that already exist in the target
 #
 # The template is built from layers under template/, applied in order:
@@ -13,7 +15,7 @@
 set -euo pipefail
 src="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-usage() { sed -n '2,13p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage() { sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 
 dst="" repo="github" force=0
 while [[ $# -gt 0 ]]; do
@@ -73,3 +75,6 @@ echo
 echo "Installed: repo=$repo"
 echo "Next: edit $dst/scripts/factory/commands.env and the Project section of $dst/AGENTS.md,"
 echo "then run: (cd $dst && bash scripts/factory/test-hooks.sh && bash scripts/factory/check.sh)"
+if [[ "$repo" == "local" ]]; then
+  echo "Then commit, write a task from tasks/_template.md, commit it, and run scripts/factory/run-task.sh <id>."
+fi

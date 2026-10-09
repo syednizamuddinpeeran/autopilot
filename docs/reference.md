@@ -10,7 +10,7 @@
 | `run-issue.sh <N> [--watch]` | human (local) | Fetches the issue with `gh`; creates worktree + `agent/issue-N-<slug>` from `origin/<base>`; launches Copilot with `--agent factory` |
 | `test-hooks.sh` | human, CI | 38 assertions in a throwaway repo (guard allow/deny, stop gate, logging, redaction), including the repo-type cases in `test-hooks.d/` |
 
-`install.sh <target> [--repo github] [--force]` (template repo root) builds the template from `template/core` + `template/repo/<type>` and copies it into another repo.
+`install.sh <target> [--repo github|local] [--force]` (template repo root) builds the template from `template/core` + `template/repo/<type>` and copies it into another repo.
 
 Repo-type pieces in the installed tree: `.github/hooks/scripts/repo-rules.sh` (extra guard rules, e.g. push branch/refspec checks), the repo-type section at the end of each `policy/*.txt`, and `scripts/factory/test-hooks.d/<type>.sh` (extra self-test cases).
 

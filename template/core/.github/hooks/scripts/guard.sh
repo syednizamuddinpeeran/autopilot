@@ -23,7 +23,7 @@ args="$(jq -c '(.toolArgs // .tool_input // {}) | if type == "string" then (from
 deny() {
   local reason="$1"
   factory_log "preToolUse" "$payload" "$(jq -nc --arg r "$reason" '{decision: "deny", reason: $r}')" || true
-  jq -nc --arg r "Blocked by factory guard: $reason. Do not retry this action or work around it; choose a safe alternative or record it as a follow-up in the PR." \
+  jq -nc --arg r "Blocked by factory guard: $reason. Do not retry this action or work around it; choose a safe alternative or record it as a follow-up in the PR or handoff." \
     '{permissionDecision: "deny", permissionDecisionReason: $r}'
   exit 0
 }

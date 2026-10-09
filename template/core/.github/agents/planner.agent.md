@@ -1,6 +1,6 @@
 ---
 name: planner
-description: Turns an issue brief into a small, ordered, testable implementation plan. Read-only on source code; writes only the plan file.
+description: Turns a brief (from an issue or task file) into a small, ordered, testable implementation plan. Read-only on source code; writes only the plan file.
 tools: ["read", "search", "edit"]
 ---
 

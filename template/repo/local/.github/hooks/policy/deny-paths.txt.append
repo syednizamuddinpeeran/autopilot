@@ -1,0 +1,7 @@
+
+# ===== Repo type: local (no remote): accept.sh is the only review gate, so protect more =====
+write:\.github/(agents|skills)/
+write:AGENTS\.md
+write:scripts/factory/(accept|run-task|setup|test-hooks)\.sh
+write:scripts/factory/test-hooks\.d/
+write:tasks/

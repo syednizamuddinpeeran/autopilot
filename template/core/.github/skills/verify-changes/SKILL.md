@@ -1,11 +1,11 @@
 ---
 name: verify-changes
-description: Run the project's full verification gate (format, lint, typecheck, tests, build) and interpret failures. Use before review and before opening a PR.
+description: Run the project's full verification gate (format, lint, typecheck, tests, build) and interpret failures. Use before review and before the final step (PR or handoff).
 ---
 
 # Verify changes
 
-1. Run: `bash scripts/factory/check.sh 2>&1 | tee .agent-work/issue-N/verify.log`
+1. Run: `bash scripts/factory/check.sh 2>&1 | tee .agent-work/<id>/verify.log`
 2. Exit code 0 → verification passed. `check.sh` records a marker the stop hook uses;
    any later file change invalidates it, so re-run after every fix.
 3. Non-zero → read only the failing section of `verify.log`. Summarize each failure as
@@ -18,4 +18,4 @@ description: Run the project's full verification gate (format, lint, typecheck, 
 
 If a failure is clearly unrelated to this change (pre-existing on the base branch),
 confirm by checking it out on the base branch with `git stash; bash scripts/factory/check.sh; git stash pop`,
-then record it under "Pre-existing failures" in the PR.
+then record it under "Pre-existing failures" in the PR or handoff.

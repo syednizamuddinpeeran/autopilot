@@ -62,7 +62,7 @@ Optional: tune `.github/hooks/policy/deny-*.txt`, pin `model:` per agent, add pr
 
 Install into an existing repo:
 ```bash
-./install.sh ~/code/my-repo --repo github     # --force overwrites existing files
+./install.sh ~/code/my-repo --repo github     # or --repo local (no remote); --force overwrites
 cd ~/code/my-repo && bash scripts/factory/test-hooks.sh && bash scripts/factory/check.sh
 ```
 
@@ -98,6 +98,7 @@ jq -c 'select(.event|test("subagent")) | {ts, event, agentName}' .agent-logs/*.j
 install.sh                        builds the template from layers and copies it into a target repo
 template/core/                    files every installation gets
 template/repo/github/             GitHub issue → PR variant (cloud agent + CI)
+template/repo/local/              local task → branch variant, merged with accept.sh (docs/local-repo.md)
 tests/                            install-matrix.sh, check-links.sh (run by this repo's CI)
 .github/workflows/selftest.yml    CI for this repo only; it is not installed
 docs/                             documentation

@@ -1,14 +1,14 @@
 ---
 name: implementation-plan
-description: Format and rules for writing an ordered, test-first implementation plan from an issue brief. Use when planning code changes.
+description: Format and rules for writing an ordered, test-first implementation plan from a brief. Use when planning code changes.
 ---
 
 # Implementation plan
 
-Write `.agent-work/issue-N/plan.md` in this exact format:
+Write `.agent-work/<id>/plan.md` (`<id>` is `issue-N` or the task id) in this exact format:
 
 ```markdown
-# Plan for issue #N
+# Plan for <issue #N | task id>
 
 ## Approach
 <3–6 sentences: the design, and why it is the smallest change that works>

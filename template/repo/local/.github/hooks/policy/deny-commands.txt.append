@@ -1,0 +1,10 @@
+
+# ===== Repo type: local (no remote) =====
+# --- Git: no pushing, no remotes, no merging into the base (commit-branch rule is in repo-rules.sh) ---
+\bgit\s+push\b
+\bgit\s+remote\s+(add|set-url|rename|remove|rm)\b
+\bgit\s+(merge|rebase|cherry-pick)\b.*\b(main|master)\b
+
+# --- Human-only steps and GitHub tooling (there is no remote) ---
+\baccept\.sh\b
+\bgh\b
