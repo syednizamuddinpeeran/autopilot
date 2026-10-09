@@ -41,4 +41,4 @@ Use PowerShell; run checks with pwsh scripts/factory/check.ps1.
 "@
 
 . (Join-Path $wt 'scripts/factory/agent-cli.ps1')
-Invoke-AgentCli -Assistant $cfg['ASSISTANT'] -Prompt $prompt -Deny @('git push', 'git remote', 'Start-Process') -Watch:$Watch
+Invoke-AgentCli -Assistant $cfg['ASSISTANT'] -ForbiddenEnv $cfg['FORBIDDEN_ENV'] -Prompt $prompt -Deny @('git push', 'git remote', 'Start-Process') -Watch:$Watch

@@ -4,16 +4,16 @@ $root = Split-Path -Parent $PSScriptRoot
 $fail = 0
 foreach ($repo in (Get-ChildItem (Join-Path $root 'template/repo') -Directory).Name) {
  foreach ($assistant in (Get-ChildItem (Join-Path $root 'template/assistant') -Directory).Name) {
-  Write-Output "=== repo=$repo os=windows assistant=$assistant"
+  Write-Output "=== repo=$repo os=windows assistant=$assistant cloud=aws"
   $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("factory-matrix-" + [guid]::NewGuid())
   New-Item -ItemType Directory -Path $tmp | Out-Null
   Push-Location -LiteralPath $tmp
   try {
     git init -q -b main . ; git config user.email t@t ; git config user.name t
     Set-Content README.md '# scratch'; git add -A; git commit -qm init
-    & pwsh -NoProfile -File (Join-Path $root 'install.ps1') $tmp -Repo $repo -Os windows -Assistant $assistant | Out-Null
+    & pwsh -NoProfile -File (Join-Path $root 'install.ps1') $tmp -Repo $repo -Os windows -Assistant $assistant -Cloud aws | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'install failed' }
-    if (& pwsh -NoProfile -File (Join-Path $root 'install.ps1') $tmp -Repo $repo -Os windows -Assistant $assistant | Select-String '^added:') { throw 're-install added files' }
+    if (& pwsh -NoProfile -File (Join-Path $root 'install.ps1') $tmp -Repo $repo -Os windows -Assistant $assistant -Cloud aws | Select-String '^added:') { throw 're-install added files' }
     git add -A; git commit -qm installed
     & pwsh -NoProfile -File scripts/factory/test-hooks.ps1; if ($LASTEXITCODE -ne 0) { throw 'test-hooks.ps1 failed' }
     & pwsh -NoProfile -File scripts/factory/check.ps1 *> $null; if ($LASTEXITCODE -ne 3) { throw 'check.ps1 should exit 3 with no checks' }

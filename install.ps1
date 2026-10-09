@@ -2,7 +2,7 @@
 # PowerShell counterpart of install.sh; produces the same files for the same options.
 #
 #   pwsh ./install.ps1 <target-repo> [-Repo github|local] [-Os windows|linux|wsl]
-#                      [-Assistant copilot|claude-code] [-Force]
+#                      [-Assistant copilot|claude-code] [-Cloud none|aws] [-Force]
 #
 #   -Repo   repository type                                            [default: github]
 #             github  GitHub issue → pull request (cloud agent or local CLI, CI, branch protection)
@@ -13,9 +13,12 @@
 #   -Assistant  coding assistant that runs the agents                  [default: copilot]
 #             copilot      GitHub Copilot (cloud agent + Copilot CLI): .github/agents, skills, hooks
 #             claude-code  Claude Code (CLI + GitHub Action): .claude/agents, skills, settings.json
+#   -Cloud  where the project deploys                                  [default: none]
+#             aws   deny AWS credential use and deploys; deploy-from-CI workflow (GitHub repos)
 #   -Force  overwrite files that already exist in the target
 #
-# Layers under template/ are applied in order: core → repo/<type> → os/<os> → assistant/<assistant>.
+# Layers under template/ are applied in order: core → repo/<type> → os/<os> → assistant/<assistant>
+# → cloud/<cloud>.
 # A later layer's file replaces an earlier one at the same path, except files ending in ".append",
 # which are appended to the file of the same name without the suffix. A layer's _repo/<type>/ and
 # _os/<os>/ folders are applied right after it, only for that repo type / OS.
@@ -24,6 +27,7 @@ param(
   [string]$Repo = 'github',
   [ValidateSet('linux', 'wsl', 'windows')][string]$Os = 'windows',
   [string]$Assistant = 'copilot',
+  [string]$Cloud = 'none',
   [switch]$Force
 )
 $ErrorActionPreference = 'Stop'
@@ -41,9 +45,13 @@ if ($Assistant.StartsWith('_') -or -not (Test-Path -LiteralPath $assistantDir -P
   throw "Unknown -Assistant: $Assistant ($((Get-ChildItem (Join-Path $tpl 'assistant') -Directory).Name -join ', '))"
 }
 
+if ($Cloud -ne 'none' -and ($Cloud.StartsWith('_') -or -not (Test-Path -LiteralPath (Join-Path $tpl "cloud/$Cloud") -PathType Container))) {
+  throw "Unknown -Cloud: $Cloud (none, $((Get-ChildItem (Join-Path $tpl 'cloud') -Directory).Name -join ', '))"
+}
+
 # Layers in order; missing optional layers (e.g. os/linux) are skipped.
 $layers = @()
-foreach ($l in 'core', "repo/$Repo", "os/$Os", "assistant/$Assistant") {
+foreach ($l in 'core', "repo/$Repo", "os/$Os", "assistant/$Assistant", "cloud/$Cloud") {
   if (-not (Test-Path -LiteralPath (Join-Path $tpl $l) -PathType Container)) { continue }
   $layers += $l
   foreach ($sub in "_repo/$Repo", "_os/$Os") {
@@ -109,7 +117,7 @@ if (-not $IsWindows) {
 }
 
 Write-Output ''
-Write-Output "Installed: repo=$Repo os=$Os assistant=$Assistant"
+Write-Output "Installed: repo=$Repo os=$Os assistant=$Assistant cloud=$Cloud"
 Write-Output "Next: edit $Target/scripts/factory/commands.env and the Project section of $Target/AGENTS.md,"
 if ($Os -eq 'windows') { Write-Output "then run: cd $Target; pwsh scripts/factory/test-hooks.ps1; pwsh scripts/factory/check.ps1" }
 else { Write-Output "then run: (cd $Target && bash scripts/factory/test-hooks.sh && bash scripts/factory/check.sh)" }

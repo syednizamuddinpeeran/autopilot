@@ -2,7 +2,7 @@
 # Install the agent factory into an existing git repository.
 #
 #   ./install.sh <target-repo> [--repo github|local] [--os linux|wsl|windows]
-#                [--assistant copilot|claude-code] [--force]
+#                [--assistant copilot|claude-code] [--cloud none|aws] [--force]
 #
 #   --repo   repository type                                            [default: github]
 #              github  GitHub issue → pull request (cloud agent or local CLI, CI, branch protection)
@@ -13,19 +13,21 @@
 #   --assistant  coding assistant that runs the agents                  [default: copilot]
 #              copilot      GitHub Copilot (cloud agent + Copilot CLI): .github/agents, skills, hooks
 #              claude-code  Claude Code (CLI + GitHub Action): .claude/agents, skills, settings.json
+#   --cloud  where the project deploys                                  [default: none]
+#              aws   deny AWS credential use and deploys; deploy-from-CI workflow (GitHub repos)
 #   --force  overwrite files that already exist in the target
 #
 # The template is built from layers under template/, applied in order:
-#   core → repo/<type> → os/<os> → assistant/<assistant>
+#   core → repo/<type> → os/<os> → assistant/<assistant> → cloud/<cloud>
 # A later layer's file replaces an earlier one at the same path, except files ending in
 # ".append", which are appended to the file of the same name without the suffix.
 # A layer's _repo/<type>/ and _os/<os>/ folders are applied right after it, only for that repo type / OS.
 set -euo pipefail
 src="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-usage() { sed -n '2,24p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage() { sed -n '2,26p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 
-dst="" repo="github" os="linux" assistant="copilot" force=0
+dst="" repo="github" os="linux" assistant="copilot" cloud="none" force=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --repo)   repo="${2:?--repo needs a value}"; shift 2 ;;
@@ -34,6 +36,8 @@ while [[ $# -gt 0 ]]; do
     --os=*)   os="${1#*=}"; shift ;;
     --assistant)   assistant="${2:?--assistant needs a value}"; shift 2 ;;
     --assistant=*) assistant="${1#*=}"; shift ;;
+    --cloud)   cloud="${2:?--cloud needs a value}"; shift 2 ;;
+    --cloud=*) cloud="${1#*=}"; shift ;;
     --force)  force=1; shift ;;
     -h|--help) usage 0 ;;
     -*) echo "Unknown option: $1" >&2; usage 1 ;;
@@ -45,11 +49,12 @@ done
 
 case "$os" in linux|wsl|windows) ;; *) echo "Unknown --os: $os (linux, wsl, windows)" >&2; exit 1 ;; esac
 [[ -d "$src/template/repo/$repo" && "$repo" != _* ]] || { echo "Unknown --repo: $repo ($(ls "$src/template/repo" | tr '\n' ' '))" >&2; exit 1; }
+[[ "$cloud" == none || ( -d "$src/template/cloud/$cloud" && "$cloud" != _* ) ]] || { echo "Unknown --cloud: $cloud (none $(ls "$src/template/cloud" | tr '\n' ' '))" >&2; exit 1; }
 [[ -d "$src/template/assistant/$assistant" && "$assistant" != _* ]] || { echo "Unknown --assistant: $assistant ($(ls "$src/template/assistant" | tr '\n' ' '))" >&2; exit 1; }
 
 # Layers in order; missing optional layers (e.g. os/linux) are skipped.
 layers=()
-for l in core "repo/$repo" "os/$os" "assistant/$assistant"; do
+for l in core "repo/$repo" "os/$os" "assistant/$assistant" "cloud/$cloud"; do
   [[ -d "$src/template/$l" ]] || continue
   layers+=("$l")
   for sub in "_repo/$repo" "_os/$os"; do
@@ -93,7 +98,7 @@ done
 chmod +x "$dst"/.github/hooks/scripts/*.sh "$dst"/scripts/factory/*.sh 2>/dev/null || true
 
 echo
-echo "Installed: repo=$repo os=$os assistant=$assistant"
+echo "Installed: repo=$repo os=$os assistant=$assistant cloud=$cloud"
 echo "Next: edit $dst/scripts/factory/commands.env and the Project section of $dst/AGENTS.md,"
 if [[ "$os" == "windows" ]]; then
   echo "then run: (cd $dst; pwsh scripts/factory/test-hooks.ps1; pwsh scripts/factory/check.ps1)"

@@ -1,0 +1,28 @@
+
+# ===== Cloud: aws — agents never hold credentials or change AWS; deploys run from CI after merge =====
+# --- Credentials and secrets ---
+\baws\s+configure\b
+\baws\s+sso\s+login\b
+\baws\s+sts\s+(assume-role|assume-role-with-web-identity|assume-role-with-saml|get-session-token|get-federation-token)\b
+\baws\s+secretsmanager\s+(get-secret-value|batch-get-secret-value)\b
+\baws\s+ssm\s+get-parameters?(-by-path)?\b.*--with-decryption
+\baws\s+kms\s+(decrypt|generate-data-key)
+\baws\s+ecr\s+get-login(-password)?\b
+\baws\s+iam\s+(create|delete|update|put|attach|detach|add|remove|upload)-
+\b(aws-vault|saml2aws|aws-sso-util)\b
+# --- Mutating AWS CLI calls (extends the core delete-/create-/... rule) ---
+\baws\s+\S+\s+(run|start|stop|reboot|invoke|publish|send|restore|import|tag|untag|enable|disable|associate|disassociate|revoke|authorize|set|reset|replace|register|cancel|execute|upload|copy|apply|batch-write|batch-delete|purge|rotate)-
+\baws\s+lambda\s+invoke\b
+\baws\s+s3\s+(cp|mv|rm|sync|rb|mb)\b
+\baws\s+cloudformation\s+(deploy|package)\b
+\baws\s+deploy\b
+# --- Deploy tools ---
+\b(npx\s+)?(aws-)?cdk\s+(deploy|destroy|bootstrap|import|migrate|watch|rollback|gc)\b
+\bcdklocal\s+deploy\b
+\bsam\s+(deploy|delete|sync|remote)\b
+\b(serverless|sls)\s+(deploy|remove|rollback)\b
+\bamplify\s+(push|publish|delete|add\s+hosting)\b
+\beb\s+(deploy|create|terminate|swap|restore|scale)\b
+\bcopilot\s+(app|env|svc|job|pipeline|task)\s+(deploy|delete|run|init)\b
+\b(terraform|tofu|terragrunt)\s+(apply|destroy|import|state|taint|untaint|force-unlock|run-all)\b
+\b(chalice|zappa)\s+(deploy|delete|update|undeploy)\b

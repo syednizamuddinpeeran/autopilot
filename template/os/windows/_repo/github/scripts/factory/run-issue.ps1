@@ -41,4 +41,4 @@ You are on branch $branch in an isolated worktree. Base branch: $base. Use Power
 "@
 
 . (Join-Path $wt 'scripts/factory/agent-cli.ps1')
-Invoke-AgentCli -Assistant $cfg['ASSISTANT'] -Prompt $prompt -Deny @('git push --force', 'gh pr merge', 'Start-Process') -Watch:$Watch
+Invoke-AgentCli -Assistant $cfg['ASSISTANT'] -ForbiddenEnv $cfg['FORBIDDEN_ENV'] -Prompt $prompt -Deny @('git push --force', 'gh pr merge', 'Start-Process') -Watch:$Watch
