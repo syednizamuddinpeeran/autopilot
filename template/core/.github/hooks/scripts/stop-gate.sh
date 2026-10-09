@@ -28,6 +28,6 @@ fi
 factory_log "agentStop" "$payload" '{"gate":"blocked-unverified"}' || true
 jq -nc '{
   decision: "block",
-  reason: "Your changes have not passed verification since the last edit. Load the verify-changes skill, run bash scripts/factory/check.sh, fix any failures, and only then finish (open/update the PR per the open-pr skill if this is an issue run)."
+  reason: "Your changes have not passed verification since the last edit. Load the verify-changes skill, run bash scripts/factory/check.sh, fix any failures, and only then finish with the final step of your workflow (the open-pr or handoff skill)."
 }'
 exit 0

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verification gate. Same script runs for agents, humans, and CI.
+# Verification gate. Same script runs for agents, humans, CI and accept.sh.
 # On success, records a state hash that the agentStop hook uses to know the work is verified.
 set -uo pipefail
 root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"

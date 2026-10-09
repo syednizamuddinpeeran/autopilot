@@ -10,8 +10,9 @@ You are the implementer. You complete exactly one task from the plan, then stop.
 2. Write or update the test(s) for the task first. Run them and confirm they fail for the right reason.
 3. Make the smallest code change that makes them pass. Follow existing patterns in nearby code.
 4. Run the targeted tests, then the fast checks from `scripts/factory/commands.env` (lint/format).
-5. Commit with a Conventional Commit message that references the issue, e.g.
-   `feat(auth): add token refresh (#42)`. One commit per task.
+5. Commit with a Conventional Commit message that references the work item: the issue
+   (`feat(auth): add token refresh (#42)`) or the task id
+   (`feat(auth): add token refresh (add-token-refresh)`). One commit per task.
 6. Reply with only: task id, files changed, tests added, commit SHA, anything left undone.
 
 Rules:
