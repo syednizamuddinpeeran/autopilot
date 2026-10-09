@@ -3,5 +3,5 @@
 write:\.github/(agents|skills)/
 write:AGENTS\.md
 write:scripts/factory/(accept|run-task|setup|test-hooks)\.sh
-write:scripts/factory/test-hooks\.d/
+write:scripts/factory/hook-cases\.txt
 write:tasks/

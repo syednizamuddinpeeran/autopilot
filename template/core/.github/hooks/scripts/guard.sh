@@ -33,11 +33,12 @@ allow() {
   exit 0
 }
 
-# Repo-type rules: may define repo_shell_rules and repo_branch_prefixes.
-# shellcheck source=/dev/null
-if [[ -f "$here/repo-rules.sh" ]]; then source "$here/repo-rules.sh" || exit 2; fi
-# shellcheck disable=SC2034  # used by repo_shell_rules
-branch_prefixes="${FACTORY_BRANCH_PREFIXES:-${repo_branch_prefixes:-agent/}}"
+# Git branch rules for this repo type: policy/git-rules.env (KEY="value" lines, not sourced).
+git_rule() { sed -nE "s/^$1=\"?([^\"]*)\"?[[:space:]]*$/\1/p" "$policy_dir/git-rules.env" 2>/dev/null | tail -1; }
+branch_prefixes="${FACTORY_BRANCH_PREFIXES:-$(git_rule BRANCH_PREFIXES)}"
+branch_prefixes="${branch_prefixes:-agent/}"
+branch_only_git="$(git_rule BRANCH_ONLY_GIT)"
+push_current_only="$(git_rule PUSH_CURRENT_BRANCH_ONLY)"
 
 # Read regex lines from a policy file, skipping comments/blank lines.
 patterns() { [[ -f "$1" ]] && grep -Ev '^\s*(#|$)' "$1" || true; }
@@ -55,8 +56,26 @@ check_shell() {
     fi
   done < <(patterns "$policy_dir/deny-commands.txt")
 
-  # Repo-type rules (e.g. which branches may push or commit), if installed.
-  if declare -F repo_shell_rules >/dev/null; then repo_shell_rules "$norm"; fi
+  # Some git subcommands (push, or commit/merge for local repos) only on agent branches.
+  local cur ok p refs r
+  if [[ -n "$branch_only_git" ]] && grep -Eq "(^|[;&|[:space:]])git\s+(-C\s+\S+\s+)?($branch_only_git)\b" <<<"$norm"; then
+    cur="$(git -C "$root" branch --show-current 2>/dev/null || true)"
+    ok=1
+    for p in $branch_prefixes; do [[ "$cur" == "$p"* ]] && ok=0; done
+    [[ $ok -ne 0 ]] && deny "git $branch_only_git is only allowed on branches starting with: $branch_prefixes (current: ${cur:-detached})"
+  fi
+
+  # Any explicit git push refspec must name the current branch or HEAD.
+  if [[ "$push_current_only" == "1" ]] && grep -Eq '(^|[;&|[:space:]])git\s+push\b' <<<"$norm"; then
+    cur="$(git -C "$root" branch --show-current 2>/dev/null || true)"
+    refs="$(sed -E 's/.*git\s+push\s*//; s/[;&|].*//; s/(^|\s)-[-a-zA-Z=]+//g' <<<"$norm" | awk '{for (i=2;i<=NF;i++) print $i}')"
+    while IFS= read -r r; do
+      [[ -z "$r" ]] && continue
+      [[ "$r" == "HEAD" || "$r" == "$cur" || "$r" == "HEAD:$cur" || "$r" == "$cur:$cur" ]] && continue
+      [[ "$r" == "HEAD:refs/heads/$cur" ]] && continue
+      deny "git push refspec '$r' is not the current branch '$cur'"
+    done <<<"$refs"
+  fi
   allow
 }
 

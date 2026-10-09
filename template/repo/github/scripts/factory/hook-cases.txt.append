@@ -1,0 +1,15 @@
+
+# ===== Repo type: github =====
+allow sh     push current branch   :: git push -u origin HEAD
+allow sh     push named branch     :: git push origin {branch}
+allow sh     push then pr          :: git push -u origin HEAD && gh pr create --fill
+deny  sh     force push            :: git push --force origin HEAD
+deny  sh     push to main          :: git push origin main
+deny  sh     push refspec to main  :: git push origin HEAD:main
+deny  sh     merge pr              :: gh pr merge 3 --squash
+deny  sh     gh token              :: gh auth token
+allow view   view workflow         :: .github/workflows/ci.yml
+deny  create create workflow       :: .github/workflows/evil.yml
+@checkout main
+deny  sh     push from main branch :: git push -u origin HEAD
+@checkout -

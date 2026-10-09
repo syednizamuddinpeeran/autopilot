@@ -1,0 +1,17 @@
+
+# ===== Repo type: local =====
+allow sh   commit on agent branch :: git commit -am x
+deny  sh   any push               :: git push -u origin HEAD
+deny  sh   force push             :: git push --force origin HEAD
+deny  sh   add remote             :: git remote add origin https://example.com/x.git
+deny  sh   merge main             :: git merge main
+deny  sh   accept script          :: bash scripts/factory/accept.sh t
+deny  sh   gh cli                 :: gh pr create --fill
+deny  sh   gh token               :: gh auth token
+allow view view hook config       :: .github/hooks/factory.json
+deny  edit edit agent file        :: .github/agents/factory.agent.md
+deny  edit edit AGENTS.md         :: AGENTS.md
+deny  edit edit task file         :: tasks/x.md
+@checkout main
+deny  sh   commit on main branch  :: git commit -am x
+@checkout -
