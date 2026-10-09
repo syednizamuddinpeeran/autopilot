@@ -35,9 +35,11 @@ git add -A && git commit -m "chore: add agent factory" && git push
 ## 4. One-time GitHub setup
 
 1. Enable the Copilot cloud agent for the repo.
-2. Branch protection / ruleset on the base branch: require a PR, ≥1 human approval, required checks `verify`, `hooks-selftest`, `guardrails-unchanged`; block force-push; no bypass for bots.
-3. Keep the cloud agent firewall at its default; add hosts only when needed.
-4. Do not add AWS or production secrets to the `copilot` environment.
+2. Merge the template into the default branch. Custom agents appear in the agent dropdown, and `copilot-setup-steps.yml` runs, only from the default branch.
+3. Branch protection / ruleset on the base branch: require a PR, ≥1 human approval, required checks `verify`, `hooks-selftest`, `guardrails-unchanged`; block force-push; no bypass for bots. GitHub already stops the person who assigned the issue from approving Copilot's PR.
+4. Recommended: a `CODEOWNERS` entry for `.github/`, `scripts/factory/` and `AGENTS.md` with "Require review from Code Owners", so guardrail edits need your approval even where CI does not check them.
+5. Keep the cloud agent firewall on with the recommended allowlist (Settings → Copilot → Internet access); add hosts only when needed.
+6. Do not add AWS or production secrets as **Agents** secrets/variables (Settings → Secrets and variables → Agents). The cloud agent cannot see Actions secrets.
 
 ## 5. Create an issue
 
@@ -47,14 +49,14 @@ Tips: one outcome per issue; name real files in Pointers; mark risk `high` for a
 
 ## 6. Run
 
-**Cloud:** assign the issue to Copilot and choose the **factory** agent. It works on a `copilot/*` branch and opens the PR.
+**Cloud:** assign the issue to Copilot and choose the **factory** agent from the dropdown. It works on a `copilot/*` branch (the only branch it can push to) and opens the PR. By default, CI does not run on Copilot's pushes until someone with write access clicks **Approve and run workflows** — read the diff first, because CI executes branch code.
 
 **Local:**
 ```bash
 scripts/factory/run-issue.sh 42            # autonomous
 scripts/factory/run-issue.sh 42 --watch    # interactive; you switch to autopilot
 ```
-This fetches the issue with `gh`, creates `../<repo>-worktrees/issue-42` on `agent/issue-42-<slug>` from `origin/<base>` (or reuses it), runs `setup.sh`, and starts `copilot --agent factory`. Autonomous mode adds `--allow-all-tools` plus CLI-level denies for `git push --force`, `gh pr merge`, `sudo`; extra flags via `COPILOT_EXTRA_FLAGS`. Flag names can change between CLI versions — check `copilot help permissions`.
+This fetches the issue with `gh`, creates `../<repo>-worktrees/issue-42` on `agent/issue-42-<slug>` from `origin/<base>` (or reuses it), runs `setup.sh`, and starts `copilot --agent factory`. Autonomous mode sets `GITHUB_COPILOT_PROMPT_MODE_REPO_HOOKS=true` (in `-p` mode the CLI otherwise skips repository hooks in an untrusted folder, and the new worktree is untrusted) and adds `--allow-all-tools` plus CLI-level denies for `git push --force`, `gh pr merge`, `sudo`; extra flags via `COPILOT_EXTRA_FLAGS`. Flag names can change between CLI versions — check `copilot help permissions`.
 
 ## 7. Review and merge
 
@@ -63,7 +65,7 @@ Use [human-safety-checklist.md](human-safety-checklist.md). Local run artifacts:
 cat ../<repo>-worktrees/issue-42/.agent-work/issue-42/review.md
 jq -c 'select(.decision=="deny")' ../<repo>-worktrees/issue-42/.agent-logs/*.jsonl
 ```
-Merge the PR on GitHub once CI is green and you have approved it. Agents never merge.
+Merge the PR on GitHub once CI is green and you have approved it. Agents never merge; the cloud agent cannot mark its PR ready for review, approve it or merge it.
 
 ## 8. Clean up (local)
 

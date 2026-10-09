@@ -38,7 +38,8 @@ Deny-lists reduce risk; they are not a complete sandbox. Isolation and branch pr
 2. Branch protection / ruleset on `main`: require PR, ≥1 human approval, required checks
    `verify`, `hooks-selftest`, `guardrails-unchanged`; block force-push; no bypass for bots.
 3. Keep the cloud agent firewall at its default (GitHub + package registries). Add hosts only when needed.
-4. Do not add AWS or production secrets to the `copilot` environment.
+4. Do not add AWS or production secrets as Agents secrets/variables (Settings → Secrets and variables → Agents).
+5. Merge the template to the default branch first: the `factory` agent and `copilot-setup-steps.yml` are only picked up from there.
 
 ### Your machine (WSL Ubuntu)
 ```bash
@@ -47,7 +48,8 @@ sudo apt-get install -y git jq
 gh auth login
 copilot          # sign in, then inside the session:
 /sandbox enable  # turn on local sandboxing (persists in settings)
-/sandbox policy  # deny ~/.ssh and ~/.aws; keep the working directory read/write
+/sandbox config  # turn off "Allow sandbox bypass"; don't grant ~/.ssh or ~/.aws
+/sandbox policy  # check the effective policy
 ```
 Keep repos in the WSL filesystem (`~/code/...`), not `/mnt/c/...` — faster, and hooks run as bash.
 
