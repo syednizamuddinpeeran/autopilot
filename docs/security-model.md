@@ -39,7 +39,7 @@ The agent runs with broad tool permissions (`--allow-all-tools` locally), so saf
 - **Fail-open on timeout:** if the hook exceeds `timeoutSec` (15s) it is killed and the call is allowed. Keep the scripts fast.
 - **Hooks must load.** The cloud agent always loads `.github/hooks/*.json`. The CLI loads repository hooks in `-p` mode only for a trusted folder or with `GITHUB_COPILOT_PROMPT_MODE_REPO_HOOKS=true`, which `run-issue.sh` sets. If you start `copilot -p` yourself in an untrusted folder, **no guard runs**.
 - Policy files are themselves write-protected from the agent.
-- `test-hooks.sh` runs 38 assertions (allow/deny cases, stop gate, redaction). CI runs it as `hooks-selftest`.
+- `test-hooks.sh` (and `test-hooks.ps1` on Windows) runs every case in `hook-cases.txt` plus stop-gate, logging and redaction checks. CI runs it as `hooks-selftest`.
 
 ## What is denied (summary)
 

@@ -10,7 +10,7 @@ npm install -g @github/copilot
 gh auth login
 copilot            # sign in; then enable the sandbox — see sandboxing.md
 ```
-Keep repos in the WSL filesystem (`~/code/...`), not `/mnt/c/...`. Native Windows is unsupported (hooks are bash).
+Keep repos in the WSL filesystem (`~/code/...`), not `/mnt/c/...`. For native Windows (PowerShell 7), see [platforms.md](platforms.md).
 
 ## 2. Install into a repository
 

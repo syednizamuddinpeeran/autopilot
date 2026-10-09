@@ -12,6 +12,7 @@ A GitHub issue goes in; a verified, reviewed pull request comes out. A human mer
 | Know what *you* must check | [human-safety-checklist.md](human-safety-checklist.md) |
 | Understand Copilot CLI sandboxing | [sandboxing.md](sandboxing.md) |
 | Use it without GitHub (local repo) | [local-repo.md](local-repo.md) |
+| Run on Linux, WSL or native Windows | [platforms.md](platforms.md) |
 | Look something up | [reference.md](reference.md) |
 | Fix a problem | [troubleshooting.md](troubleshooting.md) |
 

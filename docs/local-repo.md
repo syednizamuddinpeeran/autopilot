@@ -26,7 +26,7 @@ human: scripts/factory/accept.sh <id>
 | Git rules (guard) | push only the current `agent/*`/`copilot/*` branch; no force-push; `gh` merge/admin denied | no `git push`, no `git remote` changes, no merging `main`/`master`, no `gh`; commits only on `agent/*` |
 | Extra write-protected paths | `.github/workflows/` | `.github/agents/`, `.github/skills/`, `AGENTS.md`, `tasks/`, `accept.sh`, `run-task.sh`, `setup.sh`, `test-hooks.sh`, `test-hooks.d/` |
 | Verification / merge gate | CI + branch protection + human merge | `accept.sh` (human only; the guard denies it to agents) |
-| Hook self-test | 38 assertions | 40 assertions |
+| Hook self-test cases | github section of `hook-cases.txt` | local section of `hook-cases.txt` |
 
 Everything else — agents, hooks, stop gate, logging, `check.sh`, sandboxing — is shared; see the other docs.
 

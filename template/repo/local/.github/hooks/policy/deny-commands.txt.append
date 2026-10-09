@@ -6,5 +6,5 @@
 \bgit\s+(merge|rebase|cherry-pick)\b.*\b(main|master)\b
 
 # --- Human-only steps and GitHub tooling (there is no remote) ---
-\baccept\.sh\b
+\baccept\.(sh|ps1)\b
 \bgh\b
