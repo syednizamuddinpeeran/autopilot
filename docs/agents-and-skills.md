@@ -1,6 +1,6 @@
 # Agents and Skills
 
-Agents live in `.github/agents/*.agent.md`; skills in `.github/skills/<name>/SKILL.md` and load only when an agent invokes them. Agents cannot edit either (guard hook).
+Agents live in `.github/agents/*.agent.md`; skills in `.github/skills/<name>/SKILL.md` and load only when an agent invokes them. Agents cannot edit either (guard hook). With `--assistant claude-code` they live in `.claude/agents/*.md` and `.claude/skills/` with the same bodies; only the `tools:` line uses Claude tool names ([claude-code.md](claude-code.md)). The local repo type uses `task-intake` and `handoff` instead of `issue-intake` and `open-pr` ([local-repo.md](local-repo.md)).
 
 ## Agents
 

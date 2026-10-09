@@ -39,9 +39,9 @@ Hooks wrap every step (see [security-model.md](security-model.md)) and write an 
 |---|---|---|
 | `AGENTS.md` | Always-loaded rules and project description | yes |
 | `.github/ISSUE_TEMPLATE/agent-task.yml` | Task input form | yes |
-| `.github/agents/*.agent.md` | Agent definitions | yes |
-| `.github/skills/*/SKILL.md` | Step procedures loaded on demand | yes |
-| `.github/hooks/factory.json` | Hook wiring (11 events) | yes |
+| `.github/agents/*.agent.md` (Claude Code: `.claude/agents/*.md`) | Agent definitions | yes |
+| `.github/skills/*/SKILL.md` (Claude Code: `.claude/skills/`) | Step procedures loaded on demand | yes |
+| `.github/hooks/factory.json` (Claude Code: `.claude/settings.json`) | Hook wiring (11 events) | yes |
 | `.github/hooks/scripts/` | `guard.sh`, `stop-gate.sh`, `log.sh`, `common.sh` (+ `.ps1` on Windows) | yes |
 | `.github/hooks/policy/` | `deny-commands.txt`, `deny-paths.txt`, `git-rules.env` | yes |
 | `.github/workflows/` | `copilot-setup-steps.yml` (cloud agent environment), `ci.yml` | yes |

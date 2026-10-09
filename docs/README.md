@@ -1,11 +1,14 @@
 # Agent Factory — Documentation
 
-A GitHub issue goes in; a verified, reviewed pull request comes out. A human merges it. Runs on the Copilot cloud agent (assign the issue) or locally with Copilot CLI (`run-issue.sh`).
+A GitHub issue (or a local task file) goes in; a verified, reviewed change comes out. A human merges it. Runs with GitHub Copilot or Claude Code, in the cloud or locally on Linux, WSL or Windows.
+
+The pages below describe the default combination (`--repo github --assistant copilot`) unless they say otherwise; the variant pages list what changes.
 
 ## Reading order
 
 | If you want to… | Read |
 |---|---|
+| Pick repo type, OS, assistant and cloud | [install.md](install.md) |
 | Get running in 5 minutes | [Quickstart](#quickstart) below, then [usage-guide.md](usage-guide.md) |
 | Understand how it works | [architecture.md](architecture.md), [agents-and-skills.md](agents-and-skills.md) |
 | Know why it is safe | [security-model.md](security-model.md) |
