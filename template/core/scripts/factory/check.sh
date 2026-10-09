@@ -3,7 +3,7 @@
 # On success, records a state hash that the agentStop hook uses to know the work is verified.
 set -uo pipefail
 root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-cd "$root"
+cd "$root" || exit 1
 # shellcheck disable=SC1091
 source scripts/factory/commands.env
 # shellcheck source=../../.github/hooks/scripts/common.sh

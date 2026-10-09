@@ -1,0 +1,13 @@
+
+# ===== Repo type: github =====
+# --- Git push safety (push branch/refspec rules are in repo-rules.sh) ---
+\bgit\s+push\b.*(--force|\s-f(\s|$)|--mirror|--delete|--all|--tags|\s\+\S|\s:\S)
+
+# --- GitHub actions a human must do ---
+\bgh\s+pr\s+merge\b
+\bgh\s+pr\s+review\b.*--approve
+\bgh\s+repo\s+(delete|archive|edit)\b
+\bgh\s+(secret|variable|ruleset)\b
+\bgh\s+auth\s+(token|refresh|login|logout)\b
+\bgh\s+api\b.*(-X|--method)\s*(DELETE|PUT|PATCH)
+\bgh\s+workflow\s+(run|enable|disable)\b

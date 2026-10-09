@@ -13,7 +13,6 @@ source "$here/common.sh"
 
 root="$(factory_root)"
 policy_dir="${FACTORY_POLICY_DIR:-$root/.github/hooks/policy}"
-branch_prefixes="${FACTORY_BRANCH_PREFIXES:-agent/ copilot/}"
 
 payload="$(cat)"
 factory_context
@@ -34,12 +33,18 @@ allow() {
   exit 0
 }
 
+# Repo-type rules: may define repo_shell_rules and repo_branch_prefixes.
+# shellcheck source=/dev/null
+if [[ -f "$here/repo-rules.sh" ]]; then source "$here/repo-rules.sh" || exit 2; fi
+# shellcheck disable=SC2034  # used by repo_shell_rules
+branch_prefixes="${FACTORY_BRANCH_PREFIXES:-${repo_branch_prefixes:-agent/}}"
+
 # Read regex lines from a policy file, skipping comments/blank lines.
 patterns() { [[ -f "$1" ]] && grep -Ev '^\s*(#|$)' "$1" || true; }
 
 # ---------- shell commands ----------
 check_shell() {
-  local cmd norm pat cur
+  local cmd norm pat
   cmd="$(jq -r '.command // .cmd // .script // .input // .raw // empty' <<<"$args")"
   [[ -z "$cmd" ]] && cmd="$(jq -r 'tostring' <<<"$args")"
   norm="$(tr '\n\t' '  ' <<<"$cmd" | tr -s ' ')"
@@ -50,22 +55,8 @@ check_shell() {
     fi
   done < <(patterns "$policy_dir/deny-commands.txt")
 
-  # git push: only the current agent branch, only to origin, never base branches.
-  if grep -Eq '(^|[;&|[:space:]])git\s+push\b' <<<"$norm"; then
-    cur="$(git -C "$root" branch --show-current 2>/dev/null || true)"
-    local ok=1 p
-    for p in $branch_prefixes; do [[ "$cur" == "$p"* ]] && ok=0; done
-    [[ $ok -ne 0 ]] && deny "git push is only allowed from branches starting with: $branch_prefixes (current: ${cur:-detached})"
-    # Any explicit refspec must name the current branch or HEAD.
-    local refs
-    refs="$(sed -E 's/.*git\s+push\s*//; s/[;&|].*//; s/(^|\s)-[-a-zA-Z=]+//g' <<<"$norm" | awk '{for (i=2;i<=NF;i++) print $i}')"
-    while IFS= read -r r; do
-      [[ -z "$r" ]] && continue
-      [[ "$r" == "HEAD" || "$r" == "$cur" || "$r" == "HEAD:$cur" || "$r" == "$cur:$cur" ]] && continue
-      [[ "$r" == "HEAD:refs/heads/$cur" ]] && continue
-      deny "git push refspec '$r' is not the current branch '$cur'"
-    done <<<"$refs"
-  fi
+  # Repo-type rules (e.g. which branches may push or commit), if installed.
+  if declare -F repo_shell_rules >/dev/null; then repo_shell_rules "$norm"; fi
   allow
 }
 
