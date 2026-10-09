@@ -22,7 +22,7 @@ sudo apt-get install -y git jq && npm install -g @github/copilot
 gh auth login
 
 # 2. Install into a repo (needs ≥1 commit and a GitHub remote)
-./install.sh ~/code/my-repo
+./install.sh ~/code/my-repo --repo github
 cd ~/code/my-repo
 
 # 3. Configure: edit scripts/factory/commands.env and the Project section of AGENTS.md,

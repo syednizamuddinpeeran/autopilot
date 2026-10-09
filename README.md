@@ -62,7 +62,7 @@ Optional: tune `.github/hooks/policy/deny-*.txt`, pin `model:` per agent, add pr
 
 Install into an existing repo:
 ```bash
-./install.sh ~/code/my-repo
+./install.sh ~/code/my-repo --repo github     # --force overwrites existing files
 cd ~/code/my-repo && bash scripts/factory/test-hooks.sh && bash scripts/factory/check.sh
 ```
 
@@ -92,17 +92,32 @@ jq -c 'select(.decision=="deny")' .agent-logs/*.jsonl          # everything the 
 jq -c 'select(.event|test("subagent")) | {ts, event, agentName}' .agent-logs/*.jsonl
 ```
 
-## Files
+## This repository
+
+```
+install.sh                        builds the template from layers and copies it into a target repo
+template/core/                    files every installation gets
+template/repo/github/             GitHub issue → PR variant (cloud agent + CI)
+tests/                            install-matrix.sh, check-links.sh (run by this repo's CI)
+.github/workflows/selftest.yml    CI for this repo only; it is not installed
+docs/                             documentation
+```
+Layers mirror the installed tree and are applied in order (`core` → `repo/<type>`). A later layer's file
+replaces an earlier one; a file ending in `.append` is appended to its base file instead (used for the
+deny lists). Repo-type guard rules live in `.github/hooks/scripts/repo-rules.sh`, and repo-type hook
+tests in `scripts/factory/test-hooks.d/`.
+
+## Installed files
 ```
 AGENTS.md                         always-loaded rules (kept short)
 .github/agents/*.agent.md         factory, planner, implementer, reviewer
 .github/skills/*/SKILL.md         loaded only when needed → clean context
 .github/hooks/factory.json        hook wiring for all events
-.github/hooks/scripts/            log.sh, guard.sh, stop-gate.sh, common.sh
+.github/hooks/scripts/            log.sh, guard.sh, stop-gate.sh, common.sh, repo-rules.sh
 .github/hooks/policy/             deny-commands.txt, deny-paths.txt
 .github/workflows/                copilot-setup-steps.yml, ci.yml
 .github/ISSUE_TEMPLATE/           agent-task.yml
-scripts/factory/                  commands.env, check.sh, setup.sh, run-issue.sh, test-hooks.sh
+scripts/factory/                  commands.env, check.sh, setup.sh, run-issue.sh, test-hooks.sh, test-hooks.d/
 ```
 
 ## Known limits

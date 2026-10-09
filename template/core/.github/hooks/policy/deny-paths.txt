@@ -10,8 +10,8 @@ id_rsa|id_ed25519|\.pem$|\.p12$|\.pfx$
 
 # Guardrails and pipelines: humans change these
 write:\.github/hooks/
-write:\.github/workflows/
 write:scripts/factory/check\.sh
 write:scripts/factory/commands\.env
 write:\.agent-logs/
 write:\.git/
+# Repo-type rules are appended below.

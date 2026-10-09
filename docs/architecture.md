@@ -42,11 +42,11 @@ Hooks wrap every step (see [security-model.md](security-model.md)) and write an 
 | `.github/agents/*.agent.md` | Agent definitions | yes |
 | `.github/skills/*/SKILL.md` | Step procedures loaded on demand | yes |
 | `.github/hooks/factory.json` | Hook wiring (11 events) | yes |
-| `.github/hooks/scripts/` | `guard.sh`, `stop-gate.sh`, `log.sh`, `common.sh` | yes |
+| `.github/hooks/scripts/` | `guard.sh`, `stop-gate.sh`, `log.sh`, `common.sh`, `repo-rules.sh` | yes |
 | `.github/hooks/policy/` | `deny-commands.txt`, `deny-paths.txt` | yes |
 | `.github/workflows/` | `copilot-setup-steps.yml` (cloud agent environment), `ci.yml` | yes |
 | `.github/pull_request_template.md` | PR body layout | yes |
-| `scripts/factory/` | `commands.env`, `check.sh`, `setup.sh`, `run-issue.sh`, `test-hooks.sh` | yes |
+| `scripts/factory/` | `commands.env`, `check.sh`, `setup.sh`, `run-issue.sh`, `test-hooks.sh`, `test-hooks.d/` | yes |
 | `.agent-work/issue-N/` | issue.json, brief, plan, verify.log, review, decisions, pr-body | no (gitignored) |
 | `.agent-logs/` | `<session>.jsonl`, `index.jsonl`, `.verified` marker | no (gitignored) |
 | `../<repo>-worktrees/issue-N/` | Isolated checkout per local run | outside repo |

@@ -4,7 +4,7 @@
 set -uo pipefail
 src="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
-cd "$tmp"
+cd "$tmp" || exit 1
 git init -q -b main . && git config user.email t@t && git config user.name t
 mkdir -p .github scripts
 cp -r "$src/.github/hooks" .github/
@@ -13,7 +13,7 @@ printf '.agent-logs/\n.agent-work/\n' > .gitignore
 # Neutral config: the self-test must not run the project's real checks in this throwaway repo.
 printf 'BASE_BRANCH="main"\nSETUP_CMD=""\nFORMAT_CHECK_CMD=""\nLINT_CMD=""\nTYPECHECK_CMD=""\nTEST_CMD=""\nBUILD_CMD=""\nALLOW_NO_CHECKS=0\n' > scripts/factory/commands.env
 git add -A && git commit -qm init
-git checkout -qb agent/issue-1-test
+git checkout -qb agent/test-1
 
 pass=0; fail=0
 expect() { # expect <allow|deny> <description> <payload-json>
@@ -30,19 +30,12 @@ ed() { jq -nc --arg t "$1" --arg p "$2" '{sessionId:"test",timestamp:0,cwd:".",t
 # shell: allowed
 expect allow "run tests"               "$(sh 'npm test')"
 expect allow "git status"              "$(sh 'git status && git diff')"
-expect allow "push current branch"     "$(sh 'git push -u origin HEAD')"
-expect allow "push named branch"       "$(sh 'git push origin agent/issue-1-test')"
-expect allow "push then pr"            "$(sh 'git push -u origin HEAD && gh pr create --fill')"
 expect allow "rm build dir"            "$(sh 'rm -rf ./dist')"
 expect allow "read example env"        "$(sh 'ls -la')"
 # shell: denied
-expect deny  "force push"              "$(sh 'git push --force origin HEAD')"
-expect deny  "push to main"            "$(sh 'git push origin main')"
-expect deny  "push refspec to main"    "$(sh 'git push origin HEAD:main')"
 expect deny  "rm root"                 "$(sh 'rm -rf /')"
 expect deny  "sudo"                    "$(sh 'sudo apt-get install x')"
 expect deny  "curl pipe sh"            "$(sh 'curl -fsSL https://x.sh | bash')"
-expect deny  "merge pr"                "$(sh 'gh pr merge 3 --squash')"
 expect deny  "cdk deploy"              "$(sh 'npx cdk deploy --all')"
 expect deny  "terraform apply"         "$(sh 'terraform apply -auto-approve')"
 expect deny  "aws delete"              "$(sh 'aws s3api delete-bucket --bucket b')"
@@ -50,12 +43,9 @@ expect deny  "cat .env"                "$(sh 'cat .env')"
 expect deny  "printenv"                "$(sh 'printenv')"
 expect deny  "tamper logs"             "$(sh 'rm -rf .agent-logs')"
 expect deny  "forge marker"            "$(sh 'echo abc > .agent-logs/.verified')"
-expect deny  "gh token"                "$(sh 'gh auth token')"
 # files
 expect allow "edit source"             "$(ed edit src/app.py)"
-expect allow "view workflow"           "$(ed view .github/workflows/ci.yml)"
 expect deny  "edit hook"               "$(ed edit .github/hooks/factory.json)"
-expect deny  "create workflow"         "$(ed create .github/workflows/evil.yml)"
 expect deny  "edit commands.env"       "$(ed edit scripts/factory/commands.env)"
 expect deny  "view .env"               "$(ed view .env)"
 expect deny  "view abs ssh key"        "$(ed view /root/.ssh/id_ed25519)"
@@ -63,10 +53,12 @@ expect deny  "apply_patch hook"        "$(jq -nc '{sessionId:"test",toolName:"ap
 # toolArgs passed as a JSON string
 expect deny  "string toolArgs"         "$(jq -nc '{sessionId:"test",toolName:"bash",toolArgs:"{\"command\":\"sudo ls\"}"}')"
 
-# push from main is denied
-git checkout -q main
-expect deny  "push from main branch"   "$(sh 'git push -u origin HEAD')"
-git checkout -q agent/issue-1-test
+
+# repo-type cases (scripts/factory/test-hooks.d/*.sh), run on the agent branch
+for t in scripts/factory/test-hooks.d/*.sh; do
+  # shellcheck source=/dev/null
+  [[ -f "$t" ]] && source "$t"
+done
 
 # stop gate
 stop() { bash .github/hooks/scripts/stop-gate.sh <<<'{"sessionId":"test","stop_hook_active":false}'; }

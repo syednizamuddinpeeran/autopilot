@@ -15,8 +15,8 @@ Keep repos in the WSL filesystem (`~/code/...`), not `/mnt/c/...`. Native Window
 ## 2. Install into a repository
 
 ```bash
-./install.sh /path/to/repo           # skips files that already exist
-./install.sh /path/to/repo --force   # overwrites template files
+./install.sh /path/to/repo --repo github           # skips files that already exist
+./install.sh /path/to/repo --repo github --force   # overwrites template files
 ```
 Requires a git repo with at least one commit. Appends `.agent-logs/` and `.agent-work/` to `.gitignore`, makes scripts executable.
 

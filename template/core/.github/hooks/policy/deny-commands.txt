@@ -18,19 +18,9 @@
 \b(curl|wget)\b[^|]*\|\s*(sudo\s+)?(ba|z|)sh\b
 \bbash\s+<\(\s*(curl|wget)
 
-# --- Git history / branch safety (push rules are also enforced in guard.sh) ---
-\bgit\s+push\b.*(--force|\s-f(\s|$)|--mirror|--delete|--all|--tags|\s\+\S|\s:\S)
+# --- Git history safety (repo-type rules are appended at the end of this file) ---
 \bgit\s+(filter-branch|filter-repo)\b
 \bgit\s+config\s+(--global|--system)\b
-
-# --- GitHub actions a human must do ---
-\bgh\s+pr\s+merge\b
-\bgh\s+pr\s+review\b.*--approve
-\bgh\s+repo\s+(delete|archive|edit)\b
-\bgh\s+(secret|variable|ruleset)\b
-\bgh\s+auth\s+(token|refresh|login|logout)\b
-\bgh\s+api\b.*(-X|--method)\s*(DELETE|PUT|PATCH)
-\bgh\s+workflow\s+(run|enable|disable)\b
 
 # --- Cloud / infra changes (agents never deploy) ---
 \bterraform\s+(apply|destroy|import|state)\b

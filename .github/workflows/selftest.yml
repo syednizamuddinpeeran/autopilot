@@ -1,0 +1,37 @@
+# CI for this template repository itself. The workflows that get installed into
+# target repositories live under template/ and do not run here.
+name: Template self-test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  install-matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Ensure jq
+        run: command -v jq || (sudo apt-get update && sudo apt-get install -y jq)
+      - run: bash tests/install-matrix.sh
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - run: |
+          find . -name '*.sh' -not -path './.git/*' -print0 \
+            | xargs -0 shellcheck --severity=warning --shell=bash
+
+  docs-links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - run: bash tests/check-links.sh

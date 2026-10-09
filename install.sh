@@ -1,47 +1,63 @@
 #!/usr/bin/env bash
-# Copy the agent-factory template into an existing repository.
-#   ./install.sh /path/to/repo           # skip files that already exist
-#   ./install.sh /path/to/repo --force   # overwrite template files
+# Install the agent factory into an existing git repository.
+#
+#   ./install.sh <target-repo> [--repo github] [--force]
+#
+#   --repo   repository type: github (issues → PRs, cloud agent + CI)   [default: github]
+#   --force  overwrite files that already exist in the target
+#
+# The template is built from layers under template/, applied in order:
+#   core → repo/<type>
+# A later layer's file replaces an earlier one at the same path, except files ending in
+# ".append", which are appended to the file of the same name without the suffix.
 set -euo pipefail
 src="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-dst="${1:?usage: install.sh <target-repo> [--force]}"
-force="${2:-}"
+
+usage() { sed -n '2,13p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+
+dst="" repo="github" force=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --repo)   repo="${2:?--repo needs a value}"; shift 2 ;;
+    --repo=*) repo="${1#*=}"; shift ;;
+    --force)  force=1; shift ;;
+    -h|--help) usage 0 ;;
+    -*) echo "Unknown option: $1" >&2; usage 1 ;;
+    *)  [[ -z "$dst" ]] || { echo "Only one target allowed" >&2; usage 1; }; dst="$1"; shift ;;
+  esac
+done
+[[ -n "$dst" ]] || usage 1
 [[ -d "$dst/.git" ]] || { echo "$dst is not a git repository" >&2; exit 1; }
 
-files=(
-  AGENTS.md
-  .github/agents/factory.agent.md
-  .github/agents/planner.agent.md
-  .github/agents/implementer.agent.md
-  .github/agents/reviewer.agent.md
-  .github/skills/issue-intake/SKILL.md
-  .github/skills/implementation-plan/SKILL.md
-  .github/skills/verify-changes/SKILL.md
-  .github/skills/open-pr/SKILL.md
-  .github/hooks/factory.json
-  .github/hooks/policy/deny-commands.txt
-  .github/hooks/policy/deny-paths.txt
-  .github/hooks/scripts/common.sh
-  .github/hooks/scripts/log.sh
-  .github/hooks/scripts/guard.sh
-  .github/hooks/scripts/stop-gate.sh
-  .github/workflows/copilot-setup-steps.yml
-  .github/workflows/ci.yml
-  .github/ISSUE_TEMPLATE/agent-task.yml
-  .github/pull_request_template.md
-  scripts/factory/commands.env
-  scripts/factory/check.sh
-  scripts/factory/setup.sh
-  scripts/factory/run-issue.sh
-  scripts/factory/test-hooks.sh
-)
+layers=(core "repo/$repo")
+for l in "${layers[@]}"; do
+  [[ -d "$src/template/$l" ]] || { echo "Unknown option value: template/$l does not exist" >&2; exit 1; }
+done
 
-for f in "${files[@]}"; do
-  if [[ -e "$dst/$f" && "$force" != "--force" ]]; then
+# Compose the layers into a staging tree.
+stage="$(mktemp -d)"; trap 'rm -rf "$stage"' EXIT
+for l in "${layers[@]}"; do
+  (cd "$src/template/$l" && find . -type f -print0) | while IFS= read -r -d '' f; do
+    f="${f#./}"
+    if [[ "$f" == *.append ]]; then
+      t="${f%.append}"
+      [[ -f "$stage/$t" ]] || { echo "template/$l/$f has no base file $t" >&2; exit 1; }
+      cat "$src/template/$l/$f" >> "$stage/$t"
+    else
+      mkdir -p "$stage/$(dirname "$f")"
+      cp "$src/template/$l/$f" "$stage/$f"
+    fi
+  done
+done
+
+# Copy into the target.
+(cd "$stage" && find . -type f -print | sort) | while IFS= read -r f; do
+  f="${f#./}"
+  if [[ -e "$dst/$f" && $force -eq 0 ]]; then
     echo "skip (exists): $f"; continue
   fi
   mkdir -p "$dst/$(dirname "$f")"
-  cp "$src/$f" "$dst/$f"
+  cp "$stage/$f" "$dst/$f"
   echo "added: $f"
 done
 
@@ -54,5 +70,6 @@ done
 chmod +x "$dst"/.github/hooks/scripts/*.sh "$dst"/scripts/factory/*.sh
 
 echo
+echo "Installed: repo=$repo"
 echo "Next: edit $dst/scripts/factory/commands.env and the Project section of $dst/AGENTS.md,"
 echo "then run: (cd $dst && bash scripts/factory/test-hooks.sh && bash scripts/factory/check.sh)"
