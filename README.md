@@ -77,6 +77,8 @@ scripts/factory/run-issue.sh 42 --watch  # interactive; switch to autopilot your
 Flag names (`--agent`, `-p`, `--allow-all-tools`, `--deny-tool`) can change between CLI versions —
 check `copilot help permissions` once and adjust `run-issue.sh` if needed.
 
+Full documentation: [docs/](docs/README.md).
+
 ## Logs
 - Local: `.agent-logs/<sessionId>.jsonl` (one JSON line per event) and `.agent-logs/index.jsonl` (session start/end).
 - Cloud: the sandbox is destroyed after the job, so hook logs there are discarded. Use the agent
