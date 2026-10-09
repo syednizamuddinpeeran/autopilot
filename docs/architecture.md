@@ -53,7 +53,7 @@ Hooks wrap every step (see [security-model.md](security-model.md)) and write an 
 
 ## Isolation model
 
-- **Cloud:** the agent runs in an ephemeral GitHub Actions–based environment prepared by `copilot-setup-steps.yml`. Hook logs there are discarded with the environment.
+- **Cloud:** the agent runs in an ephemeral GitHub Actions–based Linux environment prepared by `copilot-setup-steps.yml`, behind GitHub's firewall, and can push only to its own `copilot/*` branch. Hook logs there are discarded with the environment.
 - **Local:** each issue gets its own git worktree on its own `agent/issue-N-*` branch; your main checkout is never touched. `.agent-work/` and `.agent-logs/` are per-worktree.
 
 ## The verification marker

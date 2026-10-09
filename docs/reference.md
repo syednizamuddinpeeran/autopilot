@@ -16,7 +16,7 @@
 
 | File | Purpose |
 |---|---|
-| `copilot-setup-steps.yml` | Prepares the cloud agent environment. The job must be named `copilot-setup-steps`. Runs `setup.sh` |
+| `copilot-setup-steps.yml` | Prepares the cloud agent environment. Single job named `copilot-setup-steps`; only `steps`, `permissions`, `runs-on`, `services`, `snapshot`, `timeout-minutes` (≤ 59) are honoured; used only from the default branch. Runs `setup.sh` |
 | `ci.yml` | Jobs `verify` (setup + `check.sh`), `hooks-selftest`, `guardrails-unchanged` (agent/copilot branches only) |
 
 ## Hook events (`.github/hooks/factory.json`)
@@ -30,6 +30,8 @@
 | `subagentStart`, `subagentStop` | `log.sh` | 10s | |
 | `preCompact`, `errorOccurred` | `log.sh` | 10s | |
 | `agentStop` | `stop-gate.sh` | 20s | Blocks once if unverified |
+
+On the cloud agent all of these fire except that `preCompact` fires only for automatic compaction and `userPromptSubmitted` at most once; only the `bash` field is used. The CLI default timeout is 30s; this repo sets its own.
 
 `common.sh` provides `factory_log`, `factory_redact`, `factory_state_hash`, `factory_has_changes`, `factory_context`.
 
@@ -48,7 +50,8 @@ Lines starting with `#` are comments. Humans edit; agents cannot.
 | `FACTORY_POLICY_DIR` | guard.sh | Override policy directory |
 | `FACTORY_BRANCH_PREFIXES` | guard.sh | Branch prefixes allowed to `git push` (default `agent/ copilot/`) |
 | `FACTORY_WORKTREE_ROOT` | run-issue | Worktree parent (default `../<repo>-worktrees`) |
-| `COPILOT_EXTRA_FLAGS` | run-issue | Extra flags for autonomous runs |
+| `COPILOT_EXTRA_FLAGS` | run-issue | Extra flags for autonomous runs (e.g. `--sandbox`) |
+| `GITHUB_COPILOT_PROMPT_MODE_REPO_HOOKS=true` | Copilot CLI (set by run-issue) | Load repository hooks in `-p` mode in an untrusted folder |
 
 ## Log format
 
@@ -56,4 +59,4 @@ One JSON line per event in `.agent-logs/<sessionId>.jsonl`: `ts`, `event`, `bran
 
 ## Guard decision contract
 
-Print `{"permissionDecision":"deny","permissionDecisionReason":"…"}` to deny; print nothing to allow. Non-zero exit = deny; timeout = allow.
+Print `{"permissionDecision":"deny","permissionDecisionReason":"…"}` to deny; print nothing to allow. Non-zero exit = deny; timeout = allow. (`allow` and `ask` also exist; on the cloud agent `ask` is treated as deny.)

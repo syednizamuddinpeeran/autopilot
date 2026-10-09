@@ -4,8 +4,10 @@ The agent is guarded, not trusted. These are the things only you can do.
 
 ## One-time
 - [ ] Branch protection / ruleset on the base branch: PR required, ≥1 human approval, required checks `verify`, `hooks-selftest`, `guardrails-unchanged`, force-push blocked, no bot bypass.
-- [ ] No AWS or production secrets in the `copilot` environment, repo secrets the agent can reach, or `.env` files.
-- [ ] (Local runs) Copilot CLI sandbox is on (`/sandbox policy` shows `~/.ssh` and `~/.aws` denied). See [sandboxing.md](sandboxing.md).
+- [ ] CODEOWNERS covers `.github/`, `scripts/factory/`, `AGENTS.md`, with "Require review from Code Owners" (recommended).
+- [ ] No AWS or production secrets in **Agents** secrets/variables or `.env` files.
+- [ ] Cloud agent firewall on (Settings → Copilot → Internet access).
+- [ ] (Local runs) Copilot CLI sandbox is on (`/sandbox status`), `/sandbox policy` grants no `~/.ssh` or `~/.aws`, and **Allow sandbox bypass** is off. See [sandboxing.md](sandboxing.md).
 
 ## Before a run
 - [ ] Base branch has the guardrails (`.github/`, `scripts/factory/`, `AGENTS.md`) you reviewed.
@@ -15,6 +17,7 @@ The agent is guarded, not trusted. These are the things only you can do.
 - [ ] Risk is rated honestly (`high` for auth, payments, migrations, public APIs, infra).
 
 ## During / after a run
+- [ ] (Cloud) Read the diff *before* clicking **Approve and run workflows** — CI runs branch code.
 - [ ] Read the PR description: Ready vs Draft, unmet ACs, **Assumptions**, **Risks / follow-ups**.
 - [ ] Review denied actions — the agent was trying something:
   `jq -c 'select(.decision=="deny")' <worktree>/.agent-logs/*.jsonl` (local only; cloud logs are discarded).
@@ -41,5 +44,6 @@ The agent is guarded, not trusted. These are the things only you can do.
 ## Ongoing
 - Review `deny-commands.txt` / `deny-paths.txt` when your stack changes; add project-specific dangers.
 - Keep the Copilot CLI and sandbox up to date; re-check flag names after upgrades (`copilot help permissions`).
+- Never run `copilot -p` with `--allow-all-tools` yourself in an untrusted folder without `GITHUB_COPILOT_PROMPT_MODE_REPO_HOOKS=true` — the hooks would not load.
 - Delete old worktrees and logs; logs may contain sensitive command output despite redaction.
 - Add hosts to the cloud agent firewall only when needed, and remove them afterwards.
