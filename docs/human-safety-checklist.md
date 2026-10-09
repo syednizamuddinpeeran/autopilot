@@ -47,3 +47,9 @@ The agent is guarded, not trusted. These are the things only you can do.
 - Never run `copilot -p` with `--allow-all-tools` yourself in an untrusted folder without `GITHUB_COPILOT_PROMPT_MODE_REPO_HOOKS=true` — the hooks would not load.
 - Delete old worktrees and logs; logs may contain sensitive command output despite redaction.
 - Add hosts to the cloud agent firewall only when needed, and remove them afterwards.
+
+## Variant additions
+- **`--repo local`:** read `handoff.md`; merge only with `accept.sh`, and use `--allow-guardrails` only after reading each changed guardrail line ([local-repo.md](local-repo.md)).
+- **`--assistant claude-code`:** keep Claude Code current (the guard relies on `onFailure: "block"`); nothing under `.claude/` should change in an agent's diff; no `allowed_non_write_users` in the Claude workflow ([claude-code.md](claude-code.md)).
+- **`--os windows`:** run `pwsh scripts/factory/test-hooks.ps1`; remember sandbox host rules are weaker on Windows ([platforms.md](platforms.md)).
+- **`--cloud aws`:** no AWS keys anywhere agents run; the deploy role trusts only the `production` environment; `deploy-aws.yml` is in CODEOWNERS ([aws.md](aws.md)).
