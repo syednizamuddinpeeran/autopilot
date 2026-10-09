@@ -11,7 +11,7 @@ The agent is guarded, not trusted. These are the things only you can do.
 
 ## Before a run
 - [ ] Base branch has the guardrails (`.github/`, `scripts/factory/`, `AGENTS.md`) you reviewed.
-- [ ] `bash scripts/factory/test-hooks.sh` passes (38/38).
+- [ ] `bash scripts/factory/test-hooks.sh` (Windows: `pwsh scripts/factory/test-hooks.ps1`) reports 0 failed.
 - [ ] No cloud/prod credentials in your shell environment or `~/.aws` (local runs).
 - [ ] The issue text is trustworthy. Issues from outsiders, or pasted from email or web pages, can hide instructions; read them first.
 - [ ] Risk is rated honestly (`high` for auth, payments, migrations, public APIs, infra).

@@ -1,27 +1,33 @@
 #!/usr/bin/env bash
 # Install the agent factory into an existing git repository.
 #
-#   ./install.sh <target-repo> [--repo github|local] [--force]
+#   ./install.sh <target-repo> [--repo github|local] [--os linux|wsl|windows] [--force]
 #
 #   --repo   repository type                                            [default: github]
 #              github  GitHub issue → pull request (cloud agent or local CLI, CI, branch protection)
 #              local   task file → reviewed local branch, merged with accept.sh (no remote needed)
+#   --os     where agents run locally                                   [default: linux]
+#              linux, wsl  bash hooks and scripts (also what the cloud agent uses)
+#              windows     adds PowerShell 7 hooks and scripts (*.ps1); bash ones stay for the cloud agent
 #   --force  overwrite files that already exist in the target
 #
 # The template is built from layers under template/, applied in order:
-#   core → repo/<type>
+#   core → repo/<type> → os/<os>
 # A later layer's file replaces an earlier one at the same path, except files ending in
 # ".append", which are appended to the file of the same name without the suffix.
+# A layer's _repo/<type>/ folder is applied right after it, only for that repo type.
 set -euo pipefail
 src="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-usage() { sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage() { sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 
-dst="" repo="github" force=0
+dst="" repo="github" os="linux" force=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --repo)   repo="${2:?--repo needs a value}"; shift 2 ;;
     --repo=*) repo="${1#*=}"; shift ;;
+    --os)     os="${2:?--os needs a value}"; shift 2 ;;
+    --os=*)   os="${1#*=}"; shift ;;
     --force)  force=1; shift ;;
     -h|--help) usage 0 ;;
     -*) echo "Unknown option: $1" >&2; usage 1 ;;
@@ -31,15 +37,21 @@ done
 [[ -n "$dst" ]] || usage 1
 [[ -d "$dst/.git" ]] || { echo "$dst is not a git repository" >&2; exit 1; }
 
-layers=(core "repo/$repo")
-for l in "${layers[@]}"; do
-  [[ -d "$src/template/$l" ]] || { echo "Unknown option value: template/$l does not exist" >&2; exit 1; }
+case "$os" in linux|wsl|windows) ;; *) echo "Unknown --os: $os (linux, wsl, windows)" >&2; exit 1 ;; esac
+[[ -d "$src/template/repo/$repo" && "$repo" != _* ]] || { echo "Unknown --repo: $repo ($(ls "$src/template/repo" | tr '\n' ' '))" >&2; exit 1; }
+
+# Layers in order; missing optional layers (e.g. os/linux) are skipped.
+layers=()
+for l in core "repo/$repo" "os/$os"; do
+  [[ -d "$src/template/$l" ]] || continue
+  layers+=("$l")
+  [[ -d "$src/template/$l/_repo/$repo" ]] && layers+=("$l/_repo/$repo")
 done
 
 # Compose the layers into a staging tree.
 stage="$(mktemp -d)"; trap 'rm -rf "$stage"' EXIT
 for l in "${layers[@]}"; do
-  (cd "$src/template/$l" && find . -type f -print0) | while IFS= read -r -d '' f; do
+  (cd "$src/template/$l" && find . -path './_*' -prune -o -type f -print0) | while IFS= read -r -d '' f; do
     f="${f#./}"
     if [[ "$f" == *.append ]]; then
       t="${f%.append}"
@@ -69,12 +81,16 @@ gi="$dst/.gitignore"
 for line in ".agent-logs/" ".agent-work/"; do
   grep -qxF "$line" "$gi" 2>/dev/null || echo "$line" >> "$gi"
 done
-chmod +x "$dst"/.github/hooks/scripts/*.sh "$dst"/scripts/factory/*.sh
+chmod +x "$dst"/.github/hooks/scripts/*.sh "$dst"/scripts/factory/*.sh 2>/dev/null || true
 
 echo
-echo "Installed: repo=$repo"
+echo "Installed: repo=$repo os=$os"
 echo "Next: edit $dst/scripts/factory/commands.env and the Project section of $dst/AGENTS.md,"
-echo "then run: (cd $dst && bash scripts/factory/test-hooks.sh && bash scripts/factory/check.sh)"
+if [[ "$os" == "windows" ]]; then
+  echo "then run: (cd $dst; pwsh scripts/factory/test-hooks.ps1; pwsh scripts/factory/check.ps1)"
+else
+  echo "then run: (cd $dst && bash scripts/factory/test-hooks.sh && bash scripts/factory/check.sh)"
+fi
 if [[ "$repo" == "local" ]]; then
   echo "Then commit, write a task from tasks/_template.md, commit it, and run scripts/factory/run-task.sh <id>."
 fi

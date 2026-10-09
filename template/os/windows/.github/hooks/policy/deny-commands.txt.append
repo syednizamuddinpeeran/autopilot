@@ -1,0 +1,22 @@
+
+# ===== OS: windows (PowerShell / cmd equivalents of the rules above) =====
+# --- Destructive filesystem ---
+\b(Remove-Item|ri|del|erase|rd|rmdir)\b.*\s-(Recurse|r)\b.*\s([A-Za-z]:[\\/]?\*?|[\\/]\*?|~|\$env:(USERPROFILE|HOMEDRIVE|SystemRoot)|\$HOME)(\s|$)
+\b(Format-Volume|Clear-Disk|Initialize-Disk)\b
+\bformat\s+[A-Za-z]:
+# --- Privilege escalation / host changes ---
+\bStart-Process\b.*-Verb\s+RunAs\b
+\brunas\b
+\bSet-ExecutionPolicy\b
+\breg(\.exe)?\s+(add|delete|import)\b
+\b(Set|New|Remove)-ItemProperty\b.*\bHK(LM|CU|CR|U)\b
+# --- Remote code execution ---
+\b(iwr|irm|Invoke-WebRequest|Invoke-RestMethod|curl|wget)\b.*\|\s*(iex|Invoke-Expression)\b
+\b(iex|Invoke-Expression)\b.*\b(iwr|irm|Invoke-WebRequest|Invoke-RestMethod|DownloadString)\b
+# --- Secret access ---
+\b(Get-Content|gc|type|Copy-Item|cpi|Select-String|sls)\b[^|;&]*(\.env(\.|\s|$)|id_rsa|id_ed25519|\.ssh[\\/]|\.aws[\\/]credentials|\.npmrc|\.pypirc|\.netrc|\.git-credentials)
+\b(Get-ChildItem|gci|dir|ls)\s+env:
+^\s*(Get-ChildItem|gci|dir|ls)\s+env:\s*$
+\$env:[A-Za-z_]*(TOKEN|SECRET|PASSWORD|API_KEY)
+# --- Audit log tampering ---
+(\bRemove-Item\b|\bri\b|\bdel\b|\bMove-Item\b|\bClear-Content\b|\bSet-Content\b|\bOut-File\b|\bAdd-Content\b)[^|;&]*\.agent-logs

@@ -90,6 +90,7 @@ check_paths() {
   local mode="$1" path rel pat rule
   while IFS= read -r path; do
     [[ -z "$path" ]] && continue
+    path="${path//\\//}"   # Windows separators
     rel="${path#"$root"/}"; rel="${rel#/workspace/}"; rel="${rel#./}"
     while IFS= read -r rule; do
       if [[ "$rule" == write:* ]]; then

@@ -62,7 +62,8 @@ Optional: tune `.github/hooks/policy/deny-*.txt`, pin `model:` per agent, add pr
 
 Install into an existing repo:
 ```bash
-./install.sh ~/code/my-repo --repo github     # or --repo local (no remote); --force overwrites
+./install.sh ~/code/my-repo --repo github     # or --repo local (no remote); --os windows; --force overwrites
+pwsh ./install.ps1 C:\code\my-repo -Repo github   # native Windows (PowerShell 7), defaults to -Os windows
 cd ~/code/my-repo && bash scripts/factory/test-hooks.sh && bash scripts/factory/check.sh
 ```
 
@@ -99,14 +100,15 @@ install.sh                        builds the template from layers and copies it 
 template/core/                    files every installation gets
 template/repo/github/             GitHub issue → PR variant (cloud agent + CI)
 template/repo/local/              local task → branch variant, merged with accept.sh (docs/local-repo.md)
-tests/                            install-matrix.sh, check-links.sh (run by this repo's CI)
+template/os/windows/              PowerShell 7 hooks and scripts for native Windows (docs/platforms.md)
+tests/                            install-matrix.sh/.ps1, installer-parity.sh, check-links.sh (this repo's CI)
 .github/workflows/selftest.yml    CI for this repo only; it is not installed
 docs/                             documentation
 ```
-Layers mirror the installed tree and are applied in order (`core` → `repo/<type>`). A later layer's file
-replaces an earlier one; a file ending in `.append` is appended to its base file instead (used for the
-deny lists). Repo-type guard rules live in `.github/hooks/scripts/repo-rules.sh`, and repo-type hook
-tests in `scripts/factory/test-hooks.d/`.
+Layers mirror the installed tree and are applied in order (`core` → `repo/<type>` → `os/<os>`). A later
+layer's file replaces an earlier one; a file ending in `.append` is appended to its base file instead
+(deny lists, hook test cases). A layer's `_repo/<type>/` folder applies only to that repo type. Repo-type
+git rules live in `.github/hooks/policy/git-rules.env`; hook test cases in `scripts/factory/hook-cases.txt`.
 
 ## Installed files
 ```
@@ -114,14 +116,14 @@ AGENTS.md                         always-loaded rules (kept short)
 .github/agents/*.agent.md         factory, planner, implementer, reviewer
 .github/skills/*/SKILL.md         loaded only when needed → clean context
 .github/hooks/factory.json        hook wiring for all events
-.github/hooks/scripts/            log.sh, guard.sh, stop-gate.sh, common.sh, repo-rules.sh
-.github/hooks/policy/             deny-commands.txt, deny-paths.txt
+.github/hooks/scripts/            log.sh, guard.sh, stop-gate.sh, common.sh (+ *.ps1 with --os windows)
+.github/hooks/policy/             deny-commands.txt, deny-paths.txt, git-rules.env
 .github/workflows/                copilot-setup-steps.yml, ci.yml
 .github/ISSUE_TEMPLATE/           agent-task.yml
-scripts/factory/                  commands.env, check.sh, setup.sh, run-issue.sh, test-hooks.sh, test-hooks.d/
+scripts/factory/                  commands.env, check.sh, setup.sh, run-issue.sh, test-hooks.sh, hook-cases.txt (+ *.ps1)
 ```
 
 ## Known limits
 - Edits made through shell commands (e.g. `sed -i`) bypass path rules, but the stop gate and CI still catch unverified changes.
 - `.env.example` is blocked by the `.env` rule; rename it (e.g. `env.example`) or edit `deny-paths.txt`.
-- Native Windows needs PowerShell versions of the hooks; this template targets WSL, macOS, Linux, and the cloud agent.
+- Native Windows uses the PowerShell 7 hooks and scripts installed with `--os windows` (see [docs/platforms.md](docs/platforms.md)). The cloud agent always uses the bash ones.

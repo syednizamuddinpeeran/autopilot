@@ -1,0 +1,4 @@
+
+# ===== OS: windows, repo type: local =====
+deny  sh   ps accept script        :: pwsh scripts/factory/accept.ps1 t
+deny  edit edit run-task.ps1       :: scripts/factory/run-task.ps1
