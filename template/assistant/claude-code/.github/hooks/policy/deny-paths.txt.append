@@ -1,0 +1,5 @@
+
+# ===== Assistant: claude-code =====
+# .claude/ holds the hook wiring (settings.json), agents and skills.
+write:\.claude/
+write:CLAUDE\.md$

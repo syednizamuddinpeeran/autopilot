@@ -1,7 +1,8 @@
 # Install the agent factory into an existing git repository (Windows / PowerShell 7+).
 # PowerShell counterpart of install.sh; produces the same files for the same options.
 #
-#   pwsh ./install.ps1 <target-repo> [-Repo github|local] [-Os windows|linux|wsl] [-Force]
+#   pwsh ./install.ps1 <target-repo> [-Repo github|local] [-Os windows|linux|wsl]
+#                      [-Assistant copilot|claude-code] [-Force]
 #
 #   -Repo   repository type                                            [default: github]
 #             github  GitHub issue → pull request (cloud agent or local CLI, CI, branch protection)
@@ -9,16 +10,20 @@
 #   -Os     where agents run locally                                   [default: windows]
 #             windows     adds PowerShell 7 hooks and scripts (*.ps1); bash ones stay for the cloud agent
 #             linux, wsl  bash hooks and scripts only
+#   -Assistant  coding assistant that runs the agents                  [default: copilot]
+#             copilot      GitHub Copilot (cloud agent + Copilot CLI): .github/agents, skills, hooks
+#             claude-code  Claude Code (CLI + GitHub Action): .claude/agents, skills, settings.json
 #   -Force  overwrite files that already exist in the target
 #
-# Layers under template/ are applied in order: core → repo/<type> → os/<os>. A later layer's file
-# replaces an earlier one at the same path, except files ending in ".append", which are appended to
-# the file of the same name without the suffix. A layer's _repo/<type>/ folder is applied right
-# after it, only for that repo type.
+# Layers under template/ are applied in order: core → repo/<type> → os/<os> → assistant/<assistant>.
+# A later layer's file replaces an earlier one at the same path, except files ending in ".append",
+# which are appended to the file of the same name without the suffix. A layer's _repo/<type>/ and
+# _os/<os>/ folders are applied right after it, only for that repo type / OS.
 param(
   [Parameter(Mandatory, Position = 0)][string]$Target,
   [string]$Repo = 'github',
   [ValidateSet('linux', 'wsl', 'windows')][string]$Os = 'windows',
+  [string]$Assistant = 'copilot',
   [switch]$Force
 )
 $ErrorActionPreference = 'Stop'
@@ -31,12 +36,19 @@ if ($Repo.StartsWith('_') -or -not (Test-Path -LiteralPath $repoDir -PathType Co
   throw "Unknown -Repo: $Repo ($((Get-ChildItem (Join-Path $tpl 'repo') -Directory).Name -join ', '))"
 }
 
+$assistantDir = Join-Path $tpl "assistant/$Assistant"
+if ($Assistant.StartsWith('_') -or -not (Test-Path -LiteralPath $assistantDir -PathType Container)) {
+  throw "Unknown -Assistant: $Assistant ($((Get-ChildItem (Join-Path $tpl 'assistant') -Directory).Name -join ', '))"
+}
+
 # Layers in order; missing optional layers (e.g. os/linux) are skipped.
 $layers = @()
-foreach ($l in 'core', "repo/$Repo", "os/$Os") {
+foreach ($l in 'core', "repo/$Repo", "os/$Os", "assistant/$Assistant") {
   if (-not (Test-Path -LiteralPath (Join-Path $tpl $l) -PathType Container)) { continue }
   $layers += $l
-  if (Test-Path -LiteralPath (Join-Path $tpl "$l/_repo/$Repo") -PathType Container) { $layers += "$l/_repo/$Repo" }
+  foreach ($sub in "_repo/$Repo", "_os/$Os") {
+    if (Test-Path -LiteralPath (Join-Path $tpl "$l/$sub") -PathType Container) { $layers += "$l/$sub" }
+  }
 }
 
 # Relative file paths (forward slashes) in a layer, skipping its _* sub-layers.
@@ -97,7 +109,7 @@ if (-not $IsWindows) {
 }
 
 Write-Output ''
-Write-Output "Installed: repo=$Repo os=$Os"
+Write-Output "Installed: repo=$Repo os=$Os assistant=$Assistant"
 Write-Output "Next: edit $Target/scripts/factory/commands.env and the Project section of $Target/AGENTS.md,"
 if ($Os -eq 'windows') { Write-Output "then run: cd $Target; pwsh scripts/factory/test-hooks.ps1; pwsh scripts/factory/check.ps1" }
 else { Write-Output "then run: (cd $Target && bash scripts/factory/test-hooks.sh && bash scripts/factory/check.sh)" }

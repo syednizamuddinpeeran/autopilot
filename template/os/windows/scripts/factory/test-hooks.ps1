@@ -20,7 +20,7 @@ try {
   $agentBranch = 'agent/test-1'
 
   function Invoke-Hook([string]$Script, [string]$Json, [string[]]$HookArgs = @()) {
-    $out = $Json | & pwsh -NoProfile -File ".github/hooks/scripts/$Script" @HookArgs
+    $out = $Json | & pwsh -NoProfile -File ".github/hooks/scripts/$Script" @HookArgs 2>$null
     return @{ out = ($out | Out-String).Trim(); rc = $LASTEXITCODE }
   }
   function Expect([string]$Want, [string]$Desc, $Payload) {
@@ -28,13 +28,29 @@ try {
     $r = Invoke-Hook 'guard.ps1' $json
     $got = 'allow'
     if ($r.rc -ne 0) { $got = 'deny' }
-    elseif ($r.out) { try { if (($r.out | ConvertFrom-Json).permissionDecision -eq 'deny') { $got = 'deny' } } catch { $got = 'deny' } }
+    elseif ($r.out) {
+      try {
+        $j = $r.out | ConvertFrom-Json
+        $d = if ($j.PSObject.Properties['permissionDecision']) { $j.permissionDecision } elseif ($j.PSObject.Properties['hookSpecificOutput']) { $j.hookSpecificOutput.permissionDecision } else { '' }
+        if ($d -eq 'deny') { $got = 'deny' }
+      } catch { $got = 'deny' }
+    }
     if ($got -eq $Want) { $global:pass++ } else { $global:fail++; Write-Output "FAIL: $Desc (want $Want, got $got) $($r.out)" }
   }
-  function Sh([string]$c) { [ordered]@{ sessionId = 'test'; timestamp = 0; cwd = '.'; toolName = 'powershell'; toolArgs = @{ command = $c } } }
-  function Ed([string]$t, [string]$p) { [ordered]@{ sessionId = 'test'; timestamp = 0; cwd = '.'; toolName = $t; toolArgs = @{ path = $p } } }
+  # Payloads in Copilot (camelCase) or Claude Code (snake_case) shape; $format picks one.
+  function Sh([string]$c) {
+    if ($format -eq 'claude') { [ordered]@{ session_id = 'test'; cwd = '.'; hook_event_name = 'PreToolUse'; tool_name = 'PowerShell'; tool_input = @{ command = $c } } }
+    else { [ordered]@{ sessionId = 'test'; timestamp = 0; cwd = '.'; toolName = 'powershell'; toolArgs = @{ command = $c } } }
+  }
+  function Ed([string]$t, [string]$p) {
+    if ($format -eq 'claude') {
+      $ct = switch ($t) { 'view' { 'Read' } 'create' { 'Write' } default { 'Edit' } }
+      [ordered]@{ session_id = 'test'; cwd = '.'; hook_event_name = 'PreToolUse'; tool_name = $ct; tool_input = @{ file_path = $p } }
+    } else { [ordered]@{ sessionId = 'test'; timestamp = 0; cwd = '.'; toolName = $t; toolArgs = @{ path = $p } } }
+  }
 
-  # guard cases from hook-cases.txt (core + repo type + other layers)
+  # guard cases from hook-cases.txt (core + repo type + other layers), in both payload shapes
+  foreach ($format in 'copilot', 'claude') {
   foreach ($line in Get-Content scripts/factory/hook-cases.txt) {
     if ($line -match '^\s*(#|$)') { continue }
     if ($line -match '^@checkout\s+(.+)$') {
@@ -43,14 +59,18 @@ try {
     }
     if ($line -notmatch '^\s*(allow|deny)\s+([a-z]+)\s+(.*?)\s*::\s(.*)$') { $global:fail++; Write-Output "FAIL: bad case line: $line"; continue }
     $want = $Matches[1]; $kind = $Matches[2]; $desc = $Matches[3]; $arg = $Matches[4].Replace('{branch}', $agentBranch)
-    if ($kind -eq 'sh') { Expect $want $desc (Sh $arg) } else { Expect $want $desc (Ed $kind $arg) }
+    if ($kind -eq 'sh') { Expect $want "$desc [$format]" (Sh $arg) } else { Expect $want "$desc [$format]" (Ed $kind $arg) }
   }
   git checkout -q $agentBranch
+  }
+  $format = 'copilot'
 
   # payload shapes
   Expect 'deny' 'apply_patch hook' ([ordered]@{ sessionId = 'test'; toolName = 'apply_patch'; toolArgs = @{ input = "*** Begin Patch`n*** Update File: .github/hooks/factory.json`n@@" } })
   Expect 'deny' 'string toolArgs' ([ordered]@{ sessionId = 'test'; toolName = 'powershell'; toolArgs = '{"command":"sudo ls"}' })
   Expect 'deny' 'backslash path' (Ed 'edit' '.github\hooks\factory.json')
+  $r = Invoke-Hook 'guard.ps1' '{"session_id":"t","hook_event_name":"PreToolUse","tool_name":"PowerShell","tool_input":{"command":"sudo ls"}}'
+  if ($r.rc -eq 2 -and ($r.out | ConvertFrom-Json).hookSpecificOutput.permissionDecision -eq 'deny') { $global:pass++ } else { $global:fail++; Write-Output "FAIL: claude deny must exit 2 with hookSpecificOutput (rc=$($r.rc))" }
   Expect 'deny' 'malformed payload' 'not json'
 
   # stop gate

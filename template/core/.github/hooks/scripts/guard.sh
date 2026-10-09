@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # preToolUse guard: logs every tool call, then allows or denies it.
 #
-# Output contract (Copilot hooks): print ONE JSON object, or nothing.
-#   deny  -> {"permissionDecision":"deny","permissionDecisionReason":"..."}
+# Output contract: print ONE JSON object, or nothing.
+#   Copilot (camelCase payload: toolName/toolArgs)
+#     deny  -> {"permissionDecision":"deny","permissionDecisionReason":"..."}
+#   Claude Code (snake_case payload: tool_name/tool_input)
+#     deny  -> {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny",...}},
+#              the reason on stderr, and exit 2 (Claude Code treats only exit 2 as a block)
 #   allow -> print nothing (fall through to normal permissions)
-# A crash or non-zero exit DENIES the call (fail-closed). A timeout ALLOWS it (fail-open),
-# so keep this script fast.
+# A crash exits non-zero, which denies the call (Copilot: any non-zero; Claude Code: exit 2, or any
+# failure with onFailure "block"). A Copilot hook timeout ALLOWS the call, so keep this script fast.
 set -uo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=common.sh
@@ -18,13 +22,19 @@ payload="$(cat)"
 factory_context
 
 tool="$(jq -r '.toolName // .tool_name // ""' <<<"$payload")" || exit 2
+format="$(jq -r 'if has("toolName") or has("toolArgs") then "copilot" elif has("tool_name") or has("tool_input") or has("hook_event_name") then "claude" else "copilot" end' <<<"$payload")" || exit 2
 args="$(jq -c '(.toolArgs // .tool_input // {}) | if type == "string" then (fromjson? // {raw: .}) else . end' <<<"$payload")" || exit 2
 
 deny() {
   local reason="$1"
   factory_log "preToolUse" "$payload" "$(jq -nc --arg r "$reason" '{decision: "deny", reason: $r}')" || true
-  jq -nc --arg r "Blocked by factory guard: $reason. Do not retry this action or work around it; choose a safe alternative or record it as a follow-up in the PR or handoff." \
-    '{permissionDecision: "deny", permissionDecisionReason: $r}'
+  local msg="Blocked by factory guard: $reason. Do not retry this action or work around it; choose a safe alternative or record it as a follow-up in the PR or handoff."
+  if [[ "$format" == "claude" ]]; then
+    jq -nc --arg r "$msg" '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $r}}'
+    echo "$msg" >&2
+    exit 2
+  fi
+  jq -nc --arg r "$msg" '{permissionDecision: "deny", permissionDecisionReason: $r}'
   exit 0
 }
 
@@ -112,8 +122,8 @@ if [[ "$tool" == "str_replace_editor" && "$(jq -r '.command // ""' <<<"$args")" 
 fi
 
 case "$tool" in
-  bash|powershell|shell|Bash|execute)          check_shell ;;
-  edit|create|str_replace_editor|str_replace|apply_patch|write|Write|Edit|MultiEdit) check_paths write ;;
-  view|read|Read)                               check_paths read ;;
+  bash|powershell|shell|Bash|PowerShell|execute) check_shell ;;
+  edit|create|str_replace_editor|str_replace|apply_patch|write|Write|Edit|MultiEdit|NotebookEdit) check_paths write ;;
+  view|read|Read|Glob|Grep|NotebookRead)          check_paths read ;;
   *)                                            allow ;;
 esac

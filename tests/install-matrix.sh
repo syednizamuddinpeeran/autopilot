@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install every supported combination into a scratch git repo and run its self-tests there.
-#   bash tests/install-matrix.sh            # all repo types × os linux, windows
+#   bash tests/install-matrix.sh            # all repo types × os linux, windows × all assistants
 #   bash tests/install-matrix.sh github     # only repo type "github"
 # For --os windows the PowerShell tests also run when pwsh is available.
 set -uo pipefail
@@ -13,14 +13,18 @@ snapshot() { git status --porcelain | sort; find . -path ./.git -prune -o -type 
 # One combination. Every step is checked explicitly: set -e does not apply inside a function
 # whose status is tested by the caller.
 run_one() {
-  local repo="$1" os="$2" tmp="$3" before
+  local repo="$1" os="$2" assistant="$3" tmp="$4" before
   cd "$tmp" || return 1
   git init -q -b main . && git config user.email t@t && git config user.name t || return 1
   echo "# scratch" > README.md && git add -A && git commit -qm init || return 1
-  bash "$root/install.sh" "$tmp" --repo "$repo" --os "$os" >/dev/null || { echo "install failed"; return 1; }
+  bash "$root/install.sh" "$tmp" --repo "$repo" --os "$os" --assistant "$assistant" >/dev/null || { echo "install failed"; return 1; }
   before="$(snapshot)"
-  if bash "$root/install.sh" "$tmp" --repo "$repo" --os "$os" | grep -q '^added:'; then echo "re-install added files"; return 1; fi
+  if bash "$root/install.sh" "$tmp" --repo "$repo" --os "$os" --assistant "$assistant" | grep -q '^added:'; then echo "re-install added files"; return 1; fi
   [[ "$before" == "$(snapshot)" ]] || { echo "re-install changed files"; return 1; }
+  for f in .github/hooks/factory.json .claude/settings.json; do
+    [[ -f "$f" ]] && { jq -e . "$f" >/dev/null || { echo "invalid JSON: $f"; return 1; }; }
+  done
+  grep -q "^ASSISTANT=\"$assistant\"" scripts/factory/commands.env || { echo "commands.env lacks ASSISTANT=$assistant"; return 1; }
   bash scripts/factory/test-hooks.sh || return 1
   if bash scripts/factory/check.sh >/dev/null 2>&1; then echo "check.sh passed with no checks configured"; return 1; fi
   sed -i 's/^ALLOW_NO_CHECKS=0/ALLOW_NO_CHECKS=1/' scripts/factory/commands.env
@@ -40,10 +44,13 @@ run_one() {
 fail=0
 for repo in "${repos[@]}"; do
   for os in linux windows; do
-    echo "=== repo=$repo os=$os"
-    tmp="$(mktemp -d)"
-    ( run_one "$repo" "$os" "$tmp" ) || { echo "FAILED: repo=$repo os=$os"; fail=1; }
-    rm -rf "$tmp"
+    for assistant_dir in "$root"/template/assistant/*/; do
+      assistant="$(basename "$assistant_dir")"
+      echo "=== repo=$repo os=$os assistant=$assistant"
+      tmp="$(mktemp -d)"
+      ( run_one "$repo" "$os" "$assistant" "$tmp" ) || { echo "FAILED: repo=$repo os=$os assistant=$assistant"; fail=1; }
+      rm -rf "$tmp"
+    done
   done
 done
 if [[ $fail -eq 0 ]]; then echo "install matrix: all passed"; else echo "install matrix: FAILED"; fi

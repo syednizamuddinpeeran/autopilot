@@ -18,17 +18,27 @@ git checkout -qb agent/test-1
 pass=0; fail=0
 expect() { # expect <allow|deny> <description> <payload-json>
   local want="$1" desc="$2" out got
-  out="$(bash .github/hooks/scripts/guard.sh <<<"$3")"; rc=$?
+  out="$(bash .github/hooks/scripts/guard.sh <<<"$3" 2>/dev/null)"; rc=$?
   if [[ $rc -ne 0 ]]; then got="deny"
-  elif [[ "$(jq -r '.permissionDecision // "allow"' <<<"${out:-{\}}")" == "deny" ]]; then got="deny"
+  elif [[ "$(jq -r '.permissionDecision // .hookSpecificOutput.permissionDecision // "allow"' <<<"${out:-{\}}")" == "deny" ]]; then got="deny"
   else got="allow"; fi
   if [[ "$got" == "$want" ]]; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL: $desc (want $want, got $got) $out"; fi
 }
-sh() { jq -nc --arg c "$1" '{sessionId:"test",timestamp:0,cwd:".",toolName:"bash",toolArgs:{command:$c}}'; }
-ed() { jq -nc --arg t "$1" --arg p "$2" '{sessionId:"test",timestamp:0,cwd:".",toolName:$t,toolArgs:{path:$p}}'; }
+# Payloads in Copilot (camelCase) or Claude Code (snake_case) shape; FORMAT picks one.
+sh() {
+  if [[ "$FORMAT" == claude ]]; then jq -nc --arg c "$1" '{session_id:"test",cwd:".",hook_event_name:"PreToolUse",tool_name:"Bash",tool_input:{command:$c}}'
+  else jq -nc --arg c "$1" '{sessionId:"test",timestamp:0,cwd:".",toolName:"bash",toolArgs:{command:$c}}'; fi
+}
+ed() {
+  if [[ "$FORMAT" == claude ]]; then
+    local t; case "$1" in view) t=Read ;; create) t=Write ;; *) t=Edit ;; esac
+    jq -nc --arg t "$t" --arg p "$2" '{session_id:"test",cwd:".",hook_event_name:"PreToolUse",tool_name:$t,tool_input:{file_path:$p}}'
+  else jq -nc --arg t "$1" --arg p "$2" '{sessionId:"test",timestamp:0,cwd:".",toolName:$t,toolArgs:{path:$p}}'; fi
+}
 
-# guard cases from hook-cases.txt (core + repo type + other layers)
+# guard cases from hook-cases.txt (core + repo type + other layers), in both payload shapes
 agent_branch="$(git branch --show-current)"
+for FORMAT in copilot claude; do
 while IFS= read -r line; do
   [[ "$line" =~ ^[[:space:]]*(#|$) ]] && continue
   if [[ "$line" =~ ^@checkout[[:space:]]+(.+)$ ]]; then
@@ -39,14 +49,18 @@ while IFS= read -r line; do
   desc="$(sed -E 's/^[[:space:]]*[a-z]+[[:space:]]+[a-z]+[[:space:]]+//; s/[[:space:]]*::.*$//' <<<"$line")"
   arg="${line#* :: }"; arg="${arg//\{branch\}/$agent_branch}"
   case "$kind" in
-    sh) expect "$want" "$desc" "$(sh "$arg")" ;;
-    *)  expect "$want" "$desc" "$(ed "$kind" "$arg")" ;;
+    sh) expect "$want" "$desc [$FORMAT]" "$(sh "$arg")" ;;
+    *)  expect "$want" "$desc [$FORMAT]" "$(ed "$kind" "$arg")" ;;
   esac
 done < scripts/factory/hook-cases.txt
 git checkout -q "$agent_branch"
+done
 
 # payload shapes
 expect deny  "apply_patch hook"        "$(jq -nc '{sessionId:"test",toolName:"apply_patch",toolArgs:{input:"*** Begin Patch\n*** Update File: .github/hooks/factory.json\n@@"}}')"
+expect deny  "claude exit code 2"      "$(jq -nc '{session_id:"test",hook_event_name:"PreToolUse",tool_name:"Bash",tool_input:{command:"sudo ls"}}')"
+out="$(bash .github/hooks/scripts/guard.sh <<<'{"session_id":"t","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"sudo ls"}}' 2>/dev/null)"; rc=$?
+[[ $rc -eq 2 && "$(jq -r .hookSpecificOutput.permissionDecision <<<"$out")" == deny ]] && pass=$((pass+1)) || { fail=$((fail+1)); echo "FAIL: claude deny must exit 2 with hookSpecificOutput (rc=$rc)"; }
 expect deny  "string toolArgs"         "$(jq -nc '{sessionId:"test",toolName:"bash",toolArgs:"{\"command\":\"sudo ls\"}"}')"
 
 # stop gate

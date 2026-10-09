@@ -1,10 +1,6 @@
-# preToolUse guard for Windows (PowerShell 7+). Same policy files and decisions as guard.sh.
-#
-# Output contract (Copilot hooks): print ONE JSON object, or nothing.
-#   deny  -> {"permissionDecision":"deny","permissionDecisionReason":"..."}
-#   allow -> print nothing (fall through to normal permissions)
-# A crash or non-zero exit DENIES the call (fail-closed). A timeout ALLOWS it (fail-open),
-# so keep this script fast.
+# preToolUse guard for Windows (PowerShell 7+). Same policy files, decisions and output contract
+# as guard.sh (Copilot camelCase payloads and Claude Code snake_case payloads; see guard.sh).
+# A crash exits 2, which denies the call. A Copilot hook timeout ALLOWS it, so keep this fast.
 $ErrorActionPreference = 'Stop'
 try {
   . (Join-Path $PSScriptRoot 'common.ps1')
@@ -17,6 +13,9 @@ try {
   $payload = ConvertFrom-FactoryJson $payloadJson
   if ($payload -isnot [System.Collections.IDictionary]) { exit 2 }
 
+  $format = if ($payload.Contains('toolName') -or $payload.Contains('toolArgs')) { 'copilot' }
+            elseif ($payload.Contains('tool_name') -or $payload.Contains('tool_input') -or $payload.Contains('hook_event_name')) { 'claude' }
+            else { 'copilot' }
   $tool = ''
   foreach ($k in 'toolName', 'tool_name') { if ($payload.Contains($k) -and $payload[$k]) { $tool = [string]$payload[$k]; break } }
   $toolArgs = @{}
@@ -33,6 +32,11 @@ try {
 function Deny([string]$Reason) {
   try { Write-FactoryLog 'preToolUse' $payloadJson @{ decision = 'deny'; reason = $Reason } } catch { }
   $msg = "Blocked by factory guard: $Reason. Do not retry this action or work around it; choose a safe alternative or record it as a follow-up in the PR or handoff."
+  if ($format -eq 'claude') {
+    @{ hookSpecificOutput = [ordered]@{ hookEventName = 'PreToolUse'; permissionDecision = 'deny'; permissionDecisionReason = $msg } } | ConvertTo-Json -Compress
+    [Console]::Error.WriteLine($msg)
+    exit 2
+  }
   [ordered]@{ permissionDecision = 'deny'; permissionDecisionReason = $msg } | ConvertTo-Json -Compress
   exit 0
 }
@@ -135,9 +139,9 @@ function Test-Paths([string]$Mode) {
 try {
   if ($tool -eq 'str_replace_editor' -and $toolArgs.Contains('command') -and $toolArgs['command'] -eq 'view') { $tool = 'view' }
   switch -CaseSensitive ($tool) {
-    { $_ -in 'bash', 'powershell', 'shell', 'Bash', 'execute' } { Test-Shell }
-    { $_ -in 'edit', 'create', 'str_replace_editor', 'str_replace', 'apply_patch', 'write', 'Write', 'Edit', 'MultiEdit' } { Test-Paths 'write' }
-    { $_ -in 'view', 'read', 'Read' } { Test-Paths 'read' }
+    { $_ -cin 'bash', 'powershell', 'shell', 'Bash', 'PowerShell', 'execute' } { Test-Shell }
+    { $_ -cin 'edit', 'create', 'str_replace_editor', 'str_replace', 'apply_patch', 'write', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit' } { Test-Paths 'write' }
+    { $_ -cin 'view', 'read', 'Read', 'Glob', 'Grep', 'NotebookRead' } { Test-Paths 'read' }
     default { Allow }
   }
 } catch { exit 2 }

@@ -30,7 +30,7 @@ jobs:
 
   guardrails-unchanged:
     # Fails if a PR from an agent branch touches guardrail files; a human must make those changes.
-    if: startsWith(github.head_ref, 'copilot/') || startsWith(github.head_ref, 'agent/')
+    if: startsWith(github.head_ref, 'copilot/') || startsWith(github.head_ref, 'agent/') || startsWith(github.head_ref, 'claude/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -39,7 +39,7 @@ jobs:
         run: |
           changed="$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")"
           echo "$changed"
-          if echo "$changed" | grep -E '^(\.github/hooks/|\.github/workflows/|scripts/factory/(check\.(sh|ps1)|commands\.env))'; then
+          if echo "$changed" | grep -E '^(\.github/hooks/|\.github/workflows/|\.claude/|scripts/factory/(check\.(sh|ps1)|commands\.env))'; then
             echo "::error::Agent PR modifies guardrail files. A human must make these changes."
             exit 1
           fi

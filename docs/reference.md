@@ -4,14 +4,15 @@
 
 | Script | Who runs it | Purpose |
 |---|---|---|
-| `commands.env` | human edits | `BASE_BRANCH`, `SETUP_CMD`, `FORMAT_CHECK_CMD`, `LINT_CMD`, `TYPECHECK_CMD`, `TEST_CMD`, `BUILD_CMD`, `ALLOW_NO_CHECKS` |
+| `commands.env` | human edits | `BASE_BRANCH`, `SETUP_CMD`, `FORMAT_CHECK_CMD`, `LINT_CMD`, `TYPECHECK_CMD`, `TEST_CMD`, `BUILD_CMD`, `ALLOW_NO_CHECKS`, `ASSISTANT` (set by the installer) |
+| `agent-cli.sh` / `.ps1` | run-issue, run-task | Starts `copilot` or `claude` with the factory agent and CLI-level denies, per `ASSISTANT` |
 | `setup.sh` | run-issue, setup job, CI, agents | Requires `git`, `jq`; `chmod +x` scripts; creates `.agent-logs`, `.agent-work`; runs `SETUP_CMD` |
 | `check.sh` | agents, humans, CI | Runs format → lint → typecheck → test → build; skips empty; writes `.agent-logs/.verified` hash on success. Exit 0 pass, 1 fail, 3 nothing configured |
 | `run-issue.sh <N> [--watch]` | human (local) | Fetches the issue with `gh`; creates worktree + `agent/issue-N-<slug>` from `origin/<base>`; launches Copilot with `--agent factory` |
 | `test-hooks.sh` | human, CI | Runs every case in `hook-cases.txt` plus payload-shape, stop-gate, logging and redaction checks in a throwaway repo (39 for github/linux) |
 | `hook-cases.txt` | human edits | Guard test cases: `<allow\|deny> <sh\|view\|edit\|create> <description> :: <argument>`, `@checkout <branch>` |
 
-`install.sh <target> [--repo github|local] [--os linux|wsl|windows] [--force]` (or `pwsh install.ps1 <target> [-Repo …] [-Os …] [-Force]`, same output) (template repo root) builds the template from `template/core` + `template/repo/<type>` and copies it into another repo.
+`install.sh <target> [--repo github|local] [--os linux|wsl|windows] [--assistant copilot|claude-code] [--force]` (or `pwsh install.ps1 <target> [-Repo …] [-Os …] [-Assistant …] [-Force]`, same output) (template repo root) builds the template from `template/core` + `template/repo/<type>` and copies it into another repo.
 
 Repo-type and OS pieces in the installed tree: `.github/hooks/policy/git-rules.env` (which branches agents may use, which git subcommands are limited to them, whether push refspecs must be the current branch), the sections appended to each `policy/*.txt`, and the cases appended to `scripts/factory/hook-cases.txt` (run by both `test-hooks.sh` and `test-hooks.ps1`).
 
@@ -53,7 +54,8 @@ Lines starting with `#` are comments. Humans edit; agents cannot.
 | `FACTORY_POLICY_DIR` | guard.sh | Override policy directory |
 | `FACTORY_BRANCH_PREFIXES` | guard.sh | Branch prefixes allowed to `git push` (default `agent/ copilot/`) |
 | `FACTORY_WORKTREE_ROOT` | run-issue | Worktree parent (default `../<repo>-worktrees`) |
-| `COPILOT_EXTRA_FLAGS` | run-issue | Extra flags for autonomous runs (e.g. `--sandbox`) |
+| `COPILOT_EXTRA_FLAGS` | run-issue/run-task | Extra Copilot CLI flags for autonomous runs (e.g. `--sandbox`) |
+| `CLAUDE_EXTRA_FLAGS` | run-issue/run-task | Extra Claude Code flags for autonomous runs (e.g. `--max-turns 200`) |
 | `GITHUB_COPILOT_PROMPT_MODE_REPO_HOOKS=true` | Copilot CLI (set by run-issue) | Load repository hooks in `-p` mode in an untrusted folder |
 
 ## Log format
