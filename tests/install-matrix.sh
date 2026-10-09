@@ -13,13 +13,13 @@ snapshot() { git status --porcelain | sort; find . -path ./.git -prune -o -type 
 # One combination. Every step is checked explicitly: set -e does not apply inside a function
 # whose status is tested by the caller.
 run_one() {
-  local repo="$1" os="$2" assistant="$3" tmp="$4" before
+  local repo="$1" os="$2" assistant="$3" cloud="$4" tmp="$5" before
   cd "$tmp" || return 1
   git init -q -b main . && git config user.email t@t && git config user.name t || return 1
   echo "# scratch" > README.md && git add -A && git commit -qm init || return 1
-  bash "$root/install.sh" "$tmp" --repo "$repo" --os "$os" --assistant "$assistant" >/dev/null || { echo "install failed"; return 1; }
+  bash "$root/install.sh" "$tmp" --repo "$repo" --os "$os" --assistant "$assistant" --cloud "$cloud" >/dev/null || { echo "install failed"; return 1; }
   before="$(snapshot)"
-  if bash "$root/install.sh" "$tmp" --repo "$repo" --os "$os" --assistant "$assistant" | grep -q '^added:'; then echo "re-install added files"; return 1; fi
+  if bash "$root/install.sh" "$tmp" --repo "$repo" --os "$os" --assistant "$assistant" --cloud "$cloud" | grep -q '^added:'; then echo "re-install added files"; return 1; fi
   [[ "$before" == "$(snapshot)" ]] || { echo "re-install changed files"; return 1; }
   for f in .github/hooks/factory.json .claude/settings.json; do
     [[ -f "$f" ]] && { jq -e . "$f" >/dev/null || { echo "invalid JSON: $f"; return 1; }; }
@@ -46,10 +46,15 @@ for repo in "${repos[@]}"; do
   for os in linux windows; do
     for assistant_dir in "$root"/template/assistant/*/; do
       assistant="$(basename "$assistant_dir")"
-      echo "=== repo=$repo os=$os assistant=$assistant"
-      tmp="$(mktemp -d)"
-      ( run_one "$repo" "$os" "$assistant" "$tmp" ) || { echo "FAILED: repo=$repo os=$os assistant=$assistant"; fail=1; }
-      rm -rf "$tmp"
+      # Each combination once without a cloud; the cloud layers once each on linux to keep CI short.
+      clouds=(none)
+      [[ "$os" == linux ]] && for c in "$root"/template/cloud/*/; do clouds+=("$(basename "$c")"); done
+      for cloud in "${clouds[@]}"; do
+        echo "=== repo=$repo os=$os assistant=$assistant cloud=$cloud"
+        tmp="$(mktemp -d)"
+        ( run_one "$repo" "$os" "$assistant" "$cloud" "$tmp" ) || { echo "FAILED: repo=$repo os=$os assistant=$assistant cloud=$cloud"; fail=1; }
+        rm -rf "$tmp"
+      done
     done
   done
 done

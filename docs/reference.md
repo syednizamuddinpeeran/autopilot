@@ -4,7 +4,7 @@
 
 | Script | Who runs it | Purpose |
 |---|---|---|
-| `commands.env` | human edits | `BASE_BRANCH`, `SETUP_CMD`, `FORMAT_CHECK_CMD`, `LINT_CMD`, `TYPECHECK_CMD`, `TEST_CMD`, `BUILD_CMD`, `ALLOW_NO_CHECKS`, `ASSISTANT` (set by the installer) |
+| `commands.env` | human edits | `BASE_BRANCH`, `SETUP_CMD`, `FORMAT_CHECK_CMD`, `LINT_CMD`, `TYPECHECK_CMD`, `TEST_CMD`, `BUILD_CMD`, `ALLOW_NO_CHECKS`, `ASSISTANT` (set by the installer), `FORBIDDEN_ENV` (set by `--cloud aws`: variables that stop `run-issue`/`run-task` from starting) |
 | `agent-cli.sh` / `.ps1` | run-issue, run-task | Starts `copilot` or `claude` with the factory agent and CLI-level denies, per `ASSISTANT` |
 | `setup.sh` | run-issue, setup job, CI, agents | Requires `git`, `jq`; `chmod +x` scripts; creates `.agent-logs`, `.agent-work`; runs `SETUP_CMD` |
 | `check.sh` | agents, humans, CI | Runs format → lint → typecheck → test → build; skips empty; writes `.agent-logs/.verified` hash on success. Exit 0 pass, 1 fail, 3 nothing configured |
@@ -12,7 +12,7 @@
 | `test-hooks.sh` | human, CI | Runs every case in `hook-cases.txt` plus payload-shape, stop-gate, logging and redaction checks in a throwaway repo (39 for github/linux) |
 | `hook-cases.txt` | human edits | Guard test cases: `<allow\|deny> <sh\|view\|edit\|create> <description> :: <argument>`, `@checkout <branch>` |
 
-`install.sh <target> [--repo github|local] [--os linux|wsl|windows] [--assistant copilot|claude-code] [--force]` (or `pwsh install.ps1 <target> [-Repo …] [-Os …] [-Assistant …] [-Force]`, same output) (template repo root) builds the template from `template/core` + `template/repo/<type>` and copies it into another repo.
+`install.sh <target> [--repo github|local] [--os linux|wsl|windows] [--assistant copilot|claude-code] [--cloud none|aws] [--force]` (or `pwsh install.ps1 <target> [-Repo …] [-Os …] [-Assistant …] [-Cloud …] [-Force]`, same output) (template repo root) builds the template from `template/core` + `template/repo/<type>` and copies it into another repo.
 
 Repo-type and OS pieces in the installed tree: `.github/hooks/policy/git-rules.env` (which branches agents may use, which git subcommands are limited to them, whether push refspecs must be the current branch), the sections appended to each `policy/*.txt`, and the cases appended to `scripts/factory/hook-cases.txt` (run by both `test-hooks.sh` and `test-hooks.ps1`).
 

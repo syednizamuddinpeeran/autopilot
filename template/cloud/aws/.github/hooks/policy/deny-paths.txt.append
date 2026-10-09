@@ -1,0 +1,5 @@
+
+# ===== Cloud: aws =====
+(^|/)\.aws/(credentials|config|sso/|cli/cache/)
+(^|/)\.(boto|s3cfg)$
+(^|/)\.awsvault/

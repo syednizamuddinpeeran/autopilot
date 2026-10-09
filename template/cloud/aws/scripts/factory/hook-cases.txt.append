@@ -1,0 +1,27 @@
+
+# ===== Cloud: aws =====
+allow sh   cdk synth              :: npx cdk synth --quiet
+allow sh   cdk diff               :: npx cdk diff
+allow sh   terraform plan         :: terraform plan -lock=false
+allow sh   aws cli help           :: aws s3 help
+allow sh   aws describe           :: aws ec2 describe-instances
+deny  sh   aws configure          :: aws configure set aws_access_key_id AKIA
+deny  sh   sso login              :: aws sso login --profile prod
+deny  sh   assume role            :: aws sts assume-role --role-arn arn:aws:iam::1:role/x --role-session-name s
+deny  sh   read secret            :: aws secretsmanager get-secret-value --secret-id prod/db
+deny  sh   ssm decrypt            :: aws ssm get-parameter --name /prod/db --with-decryption
+deny  sh   lambda invoke          :: aws lambda invoke --function-name f out.json
+deny  sh   start instances        :: aws ec2 start-instances --instance-ids i-1
+deny  sh   s3 sync                :: aws s3 sync ./dist s3://bucket
+deny  sh   s3 rm                  :: aws s3 rm s3://bucket --recursive
+deny  sh   cfn deploy             :: aws cloudformation deploy --template-file t.yml --stack-name s
+deny  sh   iam attach             :: aws iam attach-role-policy --role-name r --policy-arn p
+deny  sh   cdk deploy             :: npx aws-cdk deploy MyStack
+deny  sh   cdk bootstrap          :: cdk bootstrap aws://1/us-east-1
+deny  sh   sam sync               :: sam sync --watch
+deny  sh   serverless deploy      :: npx serverless deploy --stage prod
+deny  sh   terragrunt apply       :: terragrunt run-all apply
+deny  sh   aws-vault exec         :: aws-vault exec prod -- aws s3 ls
+deny  view view aws credentials   :: /home/u/.aws/credentials
+deny  view view aws config        :: /home/u/.aws/config
+deny  view view sso cache         :: /home/u/.aws/sso/cache/abc.json

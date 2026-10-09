@@ -10,6 +10,18 @@ agent_cli() {
   local mode="$1" prompt="$2" c
   shift 2
   local flags=()
+  # Credentials the agent must never inherit (FORBIDDEN_ENV in commands.env, e.g. set by --cloud aws).
+  local v
+  for v in ${FORBIDDEN_ENV:-}; do
+    if [[ -n "${!v:-}" ]]; then
+      echo "Refusing to start the agent: $v is set. Agents must not inherit cloud credentials; unset it" >&2
+      echo "(or start from a clean shell) and run again." >&2
+      exit 1
+    fi
+  done
+  if [[ -n "${FORBIDDEN_ENV:-}" && -e "$HOME/.aws/credentials" ]]; then
+    echo "Note: $HOME/.aws/credentials exists. Make sure the CLI sandbox denies ~/.aws (docs/sandboxing.md)." >&2
+  fi
   case "${ASSISTANT:-copilot}" in
     copilot)
       command -v copilot >/dev/null || { echo "Missing: copilot" >&2; exit 1; }

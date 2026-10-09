@@ -5,8 +5,17 @@
 #
 # The deny list is an extra CLI-level layer; the preToolUse guard hook enforces the full policy.
 # Flag names can change between CLI versions: check `copilot help permissions` / `claude --help`.
-function Invoke-AgentCli([string]$Assistant, [string]$Prompt, [string[]]$Deny, [switch]$Watch) {
+function Invoke-AgentCli([string]$Assistant, [string]$Prompt, [string[]]$Deny, [switch]$Watch, [string]$ForbiddenEnv = '') {
   if (-not $Assistant) { $Assistant = 'copilot' }
+  # Credentials the agent must never inherit (FORBIDDEN_ENV in commands.env, e.g. set by -Cloud aws).
+  foreach ($v in @($ForbiddenEnv -split '\s+' | Where-Object { $_ })) {
+    if ([Environment]::GetEnvironmentVariable($v)) {
+      throw "Refusing to start the agent: $v is set. Agents must not inherit cloud credentials; unset it (or start from a clean shell) and run again."
+    }
+  }
+  if ($ForbiddenEnv -and (Test-Path (Join-Path $HOME '.aws/credentials'))) {
+    [Console]::Error.WriteLine("Note: $(Join-Path $HOME '.aws/credentials') exists. Make sure the CLI sandbox denies ~/.aws (docs/sandboxing.md).")
+  }
   switch ($Assistant) {
     'copilot' {
       if (-not (Get-Command copilot -ErrorAction SilentlyContinue)) { throw 'Missing: copilot' }
