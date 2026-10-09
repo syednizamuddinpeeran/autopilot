@@ -1,13 +1,13 @@
-# Run one local task file end to end with Copilot CLI on Windows, in an isolated git worktree.
+# Run one local task file end to end with the coding assistant CLI (Copilot or Claude Code) on Windows, in an isolated git worktree.
 # PowerShell counterpart of run-task.sh. No GitHub, remote, issue, or PR is needed.
 #
 #   pwsh scripts/factory/run-task.ps1 add-csv-export          # autonomous (non-interactive)
-#   pwsh scripts/factory/run-task.ps1 add-csv-export -Watch   # interactive; you switch to autopilot
+#   pwsh scripts/factory/run-task.ps1 add-csv-export -Watch   # interactive session
 param([Parameter(Mandatory)][string]$Task, [switch]$Watch)
 $ErrorActionPreference = 'Stop'
 if ($Task -cnotmatch '^[a-z0-9][a-z0-9._-]*$') { throw "task id must be a lowercase slug: $Task" }
 
-foreach ($t in 'git', 'copilot', 'pwsh') {
+foreach ($t in 'git', 'pwsh') {
   if (-not (Get-Command $t -ErrorAction SilentlyContinue)) { throw "Missing: $t" }
 }
 $root = (git rev-parse --show-toplevel)
@@ -40,20 +40,5 @@ You are on branch $branch in an isolated worktree. Base branch: $base (local; th
 Use PowerShell; run checks with pwsh scripts/factory/check.ps1.
 "@
 
-# In prompt mode (-p) the CLI loads repository hooks only for trusted folders. The worktree is
-# new, so opt in explicitly; without this the guard, logging and stop-gate hooks would not run.
-$env:GITHUB_COPILOT_PROMPT_MODE_REPO_HOOKS = 'true'
-
-# Extra deny rules at the CLI layer (the guard hook enforces the full policy).
-# Verify flag names on your CLI version with:  copilot help permissions
-$denyFlags = @('--deny-tool', 'shell(git push)', '--deny-tool', 'shell(git remote)', '--deny-tool', 'shell(Start-Process)')
-$extra = if ($env:COPILOT_EXTRA_FLAGS) { $env:COPILOT_EXTRA_FLAGS -split '\s+' | Where-Object { $_ } } else { @() }
-
-if ($Watch) {
-  Write-Output 'Starting interactive session. Paste this, then switch to autopilot (Shift+Tab or /autopilot):'
-  Write-Output '----'; Write-Output $prompt; Write-Output '----'
-  & copilot --agent factory @denyFlags
-} else {
-  & copilot --agent factory -p $prompt --allow-all-tools @denyFlags @extra
-}
-exit $LASTEXITCODE
+. (Join-Path $wt 'scripts/factory/agent-cli.ps1')
+Invoke-AgentCli -Assistant $cfg['ASSISTANT'] -Prompt $prompt -Deny @('git push', 'git remote', 'Start-Process') -Watch:$Watch

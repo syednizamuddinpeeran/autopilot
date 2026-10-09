@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(sudo *)",
+      "Bash(gh pr merge *)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(~/.ssh/**)",
+      "Read(~/.aws/**)",
+      "Edit(./.claude/**)",
+      "Edit(./.github/hooks/**)",
+      "Edit(./.github/workflows/**)",
+      "Edit(./scripts/factory/check.sh)",
+      "Edit(./scripts/factory/check.ps1)",
+      "Edit(./scripts/factory/commands.env)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.github/hooks/scripts/log.sh",
+              "sessionStart"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.github/hooks/scripts/log.sh",
+              "userPromptSubmitted"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.github/hooks/scripts/guard.sh"
+            ],
+            "timeout": 15,
+            "onFailure": "block"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.github/hooks/scripts/log.sh",
+              "postToolUse"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.github/hooks/scripts/log.sh",
+              "postToolUseFailure"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.github/hooks/scripts/log.sh",
+              "subagentStart"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.github/hooks/scripts/log.sh",
+              "subagentStop"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.github/hooks/scripts/log.sh",
+              "preCompact"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.github/hooks/scripts/stop-gate.sh"
+            ],
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.github/hooks/scripts/log.sh",
+              "errorOccurred"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.github/hooks/scripts/log.sh",
+              "sessionEnd"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

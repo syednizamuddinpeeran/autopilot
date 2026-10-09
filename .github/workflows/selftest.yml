@@ -47,3 +47,4 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: bash tests/check-links.sh
+      - run: bash tests/check-assistant-sync.sh

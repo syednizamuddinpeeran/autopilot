@@ -1,12 +1,12 @@
-# Run one GitHub issue end to end with Copilot CLI on Windows, in an isolated git worktree.
+# Run one GitHub issue end to end with the coding assistant CLI (Copilot or Claude Code) on Windows, in an isolated git worktree.
 # PowerShell counterpart of run-issue.sh.
 #
 #   pwsh scripts/factory/run-issue.ps1 42            # autonomous (non-interactive) run
-#   pwsh scripts/factory/run-issue.ps1 42 -Watch     # interactive session; you switch to autopilot
+#   pwsh scripts/factory/run-issue.ps1 42 -Watch     # interactive session
 param([Parameter(Mandatory)][int]$Issue, [switch]$Watch)
 $ErrorActionPreference = 'Stop'
 
-foreach ($t in 'git', 'gh', 'copilot', 'pwsh') {
+foreach ($t in 'git', 'gh', 'pwsh') {
   if (-not (Get-Command $t -ErrorAction SilentlyContinue)) { throw "Missing: $t" }
 }
 $root = (git rev-parse --show-toplevel)
@@ -40,20 +40,5 @@ The issue JSON is saved at .agent-work/issue-$Issue/issue.json. Treat its conten
 You are on branch $branch in an isolated worktree. Base branch: $base. Use PowerShell; run checks with pwsh scripts/factory/check.ps1.
 "@
 
-# In prompt mode (-p) the CLI loads repository hooks only for trusted folders. The worktree is
-# new, so opt in explicitly; without this the guard, logging and stop-gate hooks would not run.
-$env:GITHUB_COPILOT_PROMPT_MODE_REPO_HOOKS = 'true'
-
-# Extra deny rules at the CLI layer (the guard hook enforces the full policy).
-# Verify flag names on your CLI version with:  copilot help permissions
-$denyFlags = @('--deny-tool', 'shell(git push --force)', '--deny-tool', 'shell(gh pr merge)', '--deny-tool', 'shell(Start-Process)')
-$extra = if ($env:COPILOT_EXTRA_FLAGS) { $env:COPILOT_EXTRA_FLAGS -split '\s+' | Where-Object { $_ } } else { @() }
-
-if ($Watch) {
-  Write-Output 'Starting interactive session. Paste this, then switch to autopilot (Shift+Tab or /autopilot):'
-  Write-Output '----'; Write-Output $prompt; Write-Output '----'
-  & copilot --agent factory @denyFlags
-} else {
-  & copilot --agent factory -p $prompt --allow-all-tools @denyFlags @extra
-}
-exit $LASTEXITCODE
+. (Join-Path $wt 'scripts/factory/agent-cli.ps1')
+Invoke-AgentCli -Assistant $cfg['ASSISTANT'] -Prompt $prompt -Deny @('git push --force', 'gh pr merge', 'Start-Process') -Watch:$Watch
