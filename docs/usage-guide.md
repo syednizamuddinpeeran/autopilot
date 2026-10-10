@@ -43,7 +43,11 @@ git add -A && git commit -m "chore: add agent factory" && git push
 
 ## 5. Create an issue
 
-Use the **Agent task** form: Goal, Acceptance criteria (Given/when/then — make them automatically testable), Out of scope, Pointers, Risk. It applies the `agent-ready` label.
+Use the **Agent task** form: Goal, Acceptance criteria (Given/when/then — make them automatically testable), Out of scope (or "None"), Pointers, Risk. It applies the `agent-ready` label.
+
+The factory never guesses requirements:
+- `run-issue.sh` first runs `scripts/factory/check-ready.sh` on the issue body. If Goal, Acceptance criteria, Out of scope or Risk is missing or still a placeholder, it lists what to fix and exits (code 4) **before any agent starts**. Run it with no issue number and it tells you how to create one (code 2).
+- If the issue is filled in but still unclear (untestable criteria, contradictions, undefined terms, unstated edge cases), the agent stops at intake, before planning, and writes `questions.md`. `run-issue.sh` shows the questions and offers to post them on the issue (code 5). Answer them in the issue and run again. On the cloud agent the questions appear as the draft PR's description.
 
 Tips: one outcome per issue; name real files in Pointers; mark risk `high` for auth, payments, migrations, public APIs, infra (result will be a draft PR).
 

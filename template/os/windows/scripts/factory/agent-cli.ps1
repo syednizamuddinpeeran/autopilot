@@ -1,7 +1,7 @@
 # Starts the coding assistant this repo was installed for (ASSISTANT in commands.env) with the
 # factory agent. Dot-sourced by run-issue.ps1 / run-task.ps1. PowerShell counterpart of agent-cli.sh.
 #
-#   Invoke-AgentCli -Assistant <copilot|claude-code> -Prompt <text> -Deny <shell commands> [-Watch]
+#   Invoke-AgentCli -Assistant <copilot|claude-code> -Prompt <text> -Deny <shell commands> [-Watch]   # then read $LASTEXITCODE
 #
 # The deny list is an extra CLI-level layer; the preToolUse guard hook enforces the full policy.
 # Flag names can change between CLI versions: check `copilot help permissions` / `claude --help`.
@@ -47,5 +47,4 @@ function Invoke-AgentCli([string]$Assistant, [string]$Prompt, [string[]]$Deny, [
     }
     default { throw "Unknown ASSISTANT in commands.env: $Assistant" }
   }
-  exit $LASTEXITCODE
 }

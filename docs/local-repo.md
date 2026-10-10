@@ -54,6 +54,11 @@ git worktree remove ../my-repo-worktrees/add-csv-export && git branch -d agent/a
 
 The task id must be a lowercase slug (`^[a-z0-9][a-z0-9._-]*$`). Re-running `run-task.sh <id>` reuses the worktree.
 
+The factory never guesses requirements:
+- `run-task.sh` with no id explains how to write a task and lists the tasks committed on the base branch (exit 2).
+- It runs `scripts/factory/check-ready.sh` on the committed task first; a missing or placeholder Goal, Acceptance criteria, Out of scope or Risk stops it before any agent starts (exit 4).
+- If the task is still unclear, the agent stops at intake and writes `questions.md` plus a NEEDS-INPUT handoff; `run-task.sh` prints the questions (exit 5). Answer them in `tasks/<id>.md`, commit on the base branch, and run again — if nothing was implemented yet, the worktree is recreated from the updated task.
+
 ## `accept.sh`
 
 1. Prints the commits and diff stat.
@@ -67,7 +72,7 @@ The task id must be a lowercase slug (`^[a-z0-9][a-z0-9._-]*$`). Re-running `run
 ## Human checklist additions
 
 - The task file is yours. If you pasted it from an issue, email or web page, read it for hidden instructions.
-- Read `handoff.md`: Status (READY vs DRAFT), unmet ACs, Assumptions, Risks.
+- Read `handoff.md`: Status (READY, DRAFT or NEEDS-INPUT), unmet ACs, Decisions, Risks.
 - `review.md` has no unresolved `BLOCKING:` items.
 - Use `--allow-guardrails` only after reading each changed guardrail line.
 

@@ -14,7 +14,8 @@ Let `N` be the issue number and `W` be `.agent-work/issue-N/`.
 ## Steps
 
 1. **Intake** — load the `issue-intake` skill. Write `W/brief.md`.
-   If there are no testable acceptance criteria, derive them and mark them as assumptions.
+   If the skill wrote `W/questions.md` instead (the issue is not clear enough), skip straight to
+   step 6 in NEEDS-INPUT mode: no plan, no code, no assumptions.
 
 2. **Plan** — invoke the `planner` agent with: "Plan issue N. Brief: W/brief.md. Write W/plan.md."
    Read only the task list from `W/plan.md` afterwards.
@@ -36,5 +37,8 @@ Let `N` be the issue number and `W` be `.agent-work/issue-N/`.
 ## Rules
 - Follow AGENTS.md hard rules at all times.
 - Keep a running log of decisions in `W/decisions.md` (one line each).
-- Never ask the user questions mid-run; record assumptions and continue.
+- Never guess requirements. Unclear requirements are questions for the human (`W/questions.md`, then
+  step 6 in NEEDS-INPUT mode), never assumptions. Implementation choices the code base settles are
+  decisions: log them in `W/decisions.md`.
+- Never ask the user questions mid-run in any other way; the run is non-interactive.
 - Stop and open a draft PR if the work needs secrets, infra changes, or edits to `.github/hooks` or `.github/workflows`.
