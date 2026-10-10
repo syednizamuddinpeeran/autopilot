@@ -4,6 +4,7 @@
 #   - ready, agent writes questions.md → exit 5 and the questions are shown
 #   - ready, agent finishes → exit 0
 #   - local: an edited task restarts a worktree that has no commits yet
+#   - agent proposes a breakdown → exit 6, saved; create-tasks / create-issues create the sub-items
 set -uo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fx="$root/tests/fixtures/ready"
@@ -28,6 +29,10 @@ if [[ "${FAKE_AGENT:-}" == questions ]]; then
   d="$(ls -d .agent-work/*/ | head -1)"
   printf '1. Which columns are exported? — Why it matters: changes the CSV header.\n' > "${d}questions.md"
 fi
+if [[ "${FAKE_AGENT:-}" == breakdown ]]; then
+  d="$(ls -d .agent-work/*/ | head -1)"
+  cp "$FAKE_BREAKDOWN" "${d}breakdown.md"; cp "$FAKE_BRIEF" "${d}brief.md"
+fi
 exit 0
 SH
 # Fake gh: `gh issue view N --json …` prints an issue whose body is $FAKE_ISSUE_BODY;
@@ -37,13 +42,26 @@ cat > "$bin/gh" <<'SH'
 if [[ "$1 $2" == "issue view" ]]; then
   jq -n --arg b "$(cat "$FAKE_ISSUE_BODY")" '{number: 7, title: "Add CSV export", body: $b, labels: [], url: "https://example.test/7"}'
 elif [[ "$1 $2" == "issue create" ]]; then
+  n=$(( $(cat "$FAKE_GH_SEQ" 2>/dev/null || echo 7) + 1 )); echo "$n" > "$FAKE_GH_SEQ"
   printf '%s\n' "$@" > "$FAKE_GH_CREATE"
-  while [[ $# -gt 0 ]]; do [[ "$1" == --body-file ]] && cp "$2" "$FAKE_GH_CREATE.body"; shift; done
-  echo "https://example.test/issues/8"
+  while [[ $# -gt 0 ]]; do [[ "$1" == --body-file ]] && cp "$2" "$FAKE_GH_CREATE.body" && cp "$2" "$FAKE_GH_CREATE.body.$n"; shift; done
+  echo "https://example.test/issues/$n"
+elif [[ "$1 $2" == "issue comment" ]]; then
+  printf '%s\n' "$@" > "$FAKE_GH_COMMENT"
+elif [[ "$1 $2" == "pr view" ]]; then
+  jq -n --arg b "$(cat "$FAKE_PR_BODY")" --arg h "$FAKE_PR_HEAD" '{body: $b, headRefName: $h, author: {login: "Copilot"}, url: "https://example.test/pull/9"}'
+elif [[ "$1" == api ]]; then
+  echo "${*:2}" >> "$FAKE_GH_API"
+  # GET repos/{owner}/{repo}/issues/N --jq .id → a fake issue id (1000 + N)
+  [[ "$2" != -X ]] && echo $(( 1000 + ${2##*/} ))
 fi
+exit 0
 SH
 chmod +x "$bin"/*
 export PATH="$bin:$PATH" FAKE_LOG="$tmp/agent.log" FAKE_GH_CREATE="$tmp/gh-create.args"
+export FAKE_GH_SEQ="$tmp/gh-seq" FAKE_GH_API="$tmp/gh-api.log" FAKE_GH_COMMENT="$tmp/gh-comment.args"
+bd="$root/tests/fixtures/breakdown"
+export FAKE_BRIEF="$bd/brief.md"
 
 setup_repo() { # setup_repo <repo-type> <dir>
   mkdir -p "$2" && cd "$2" || exit 1
@@ -98,6 +116,24 @@ if command -v script >/dev/null; then
   [[ ! -d "$tmp/local-worktrees/draft-csv2" ]] || { echo "FAIL local: draft worktree not removed"; fail=1; }
 fi
 
+# local: too big → breakdown → sub-tasks (human-only script)
+sed 's/^# Breakdown of issue #7:/# Breakdown of task t1:/' "$bd/ok.md" > "$tmp/bd-task.md"
+out="$(FAKE_AGENT=breakdown FAKE_BREAKDOWN="$tmp/bd-task.md" bash scripts/factory/run-task.sh t1 2>&1)"; rc=$?
+check "local: breakdown proposed exits 6" 6 "$rc"
+[[ -f .agent-work/breakdowns/t1.md && -f .agent-work/breakdowns/t1.brief.md ]] || { echo "FAIL local: breakdown not saved"; fail=1; }
+grep -q "create-tasks.sh" <<<"$out" || { echo "FAIL local: breakdown next step not shown"; fail=1; }
+bash scripts/factory/create-tasks.sh .agent-work/breakdowns/t1.md --yes >/dev/null; rc=$?
+check "local: create-tasks commits the sub-tasks" 0 "$rc"
+check "local: sub-tasks committed in one commit" "task: breakdown of t1 into 3 sub-tasks" "$(git log -1 --format=%s)"
+grep -qx "Depends on: t1.1, t1.2" tasks/t1.3.md || { echo "FAIL local: sub-task dependencies not rewritten"; fail=1; }
+grep -qx "Parent: t1" tasks/t1.2.md || { echo "FAIL local: sub-task parent missing"; fail=1; }
+grep -q "^## Broken down into" tasks/t1.md || { echo "FAIL local: parent task not updated"; fail=1; }
+bash scripts/factory/check-ready.sh tasks/t1.2.md >/dev/null || { echo "FAIL local: sub-task not ready"; fail=1; }
+bash scripts/factory/create-tasks.sh .agent-work/breakdowns/t1.md --yes >/dev/null 2>&1; rc=$?
+check "local: create-tasks refuses to create twice" 1 "$rc"
+bash scripts/factory/create-tasks.sh "$bd/bad-cycle.md" --yes >/dev/null 2>&1; rc=$?
+check "local: create-tasks refuses an invalid breakdown" 4 "$rc"
+
 # ---- github repo ----
 setup_repo github "$tmp/gh"
 git init -q --bare "$tmp/origin.git" && git remote add origin "$tmp/origin.git" && git push -q origin main 2>/dev/null
@@ -130,6 +166,28 @@ grep -q "^## Acceptance criteria" "$FAKE_GH_CREATE.body" && ! grep -q "^# Add CS
   || { echo "FAIL github: issue body wrong"; fail=1; }
 bash scripts/factory/check-ready.sh "$FAKE_GH_CREATE.body" >/dev/null || { echo "FAIL github: created issue body is not ready"; fail=1; }
 grep -q "run-issue.sh 8" <<<"$out" || { echo "FAIL github: next step not shown"; fail=1; }
+
+# github: too big → breakdown → native sub-issues with blocked-by (human-only script)
+out="$(FAKE_AGENT=breakdown FAKE_BREAKDOWN="$bd/ok.md" bash scripts/factory/run-issue.sh 7 </dev/null 2>&1)"; rc=$?
+check "github: breakdown proposed exits 6" 6 "$rc"
+[[ -f .agent-work/breakdowns/issue-7.md && -f .agent-work/breakdowns/issue-7.brief.md ]] || { echo "FAIL github: breakdown not saved"; fail=1; }
+rm -f "$FAKE_GH_API"
+out="$(bash scripts/factory/create-issues.sh .agent-work/breakdowns/issue-7.md --yes 2>&1)"; rc=$?
+check "github: create-issues creates the sub-issues" 0 "$rc"
+grep -q "could not" <<<"$out" && { echo "FAIL github: create-issues reported a failed link"; fail=1; }
+# Issues 9, 10, 11 (ids 1009..1011): all sub-issues of #7; 10 blocked by 9; 11 blocked by 9 and 10.
+for want in "issues/7/sub_issues -F sub_issue_id=1009" "issues/7/sub_issues -F sub_issue_id=1010" "issues/7/sub_issues -F sub_issue_id=1011" \
+            "issues/10/dependencies/blocked_by -F issue_id=1009" "issues/11/dependencies/blocked_by -F issue_id=1009" "issues/11/dependencies/blocked_by -F issue_id=1010"; do
+  grep -q -- "$want" "$FAKE_GH_API" || { echo "FAIL github: missing gh api call: $want"; fail=1; }
+done
+grep -qx "Depends on: #9, #10" "$FAKE_GH_CREATE.body.11" || { echo "FAIL github: sub-issue dependencies not rewritten"; fail=1; }
+grep -qx "Parent: #7" "$FAKE_GH_CREATE.body.9" || { echo "FAIL github: sub-issue parent missing"; fail=1; }
+grep -qx "7" "$FAKE_GH_COMMENT" || { echo "FAIL github: summary not commented on the parent"; fail=1; }
+export FAKE_PR_BODY="$bd/ok.md" FAKE_PR_HEAD="feature/x"
+bash scripts/factory/create-issues.sh --from-pr 9 --yes >/dev/null 2>&1; rc=$?
+check "github: create-issues --from-pr refuses a non-agent branch" 1 "$rc"
+bash scripts/factory/create-issues.sh "$bd/bad-cycle.md" --parent 7 --yes >/dev/null 2>&1; rc=$?
+check "github: create-issues refuses an invalid breakdown" 4 "$rc"
 
 [[ $fail -eq 0 ]] && echo "launcher flow: all passed"
 exit $fail

@@ -59,14 +59,16 @@ The factory never guesses requirements:
 - `run-task.sh` with no id explains how to write a task and lists the tasks committed on the base branch (exit 2).
 - It runs `scripts/factory/check-ready.sh` on the committed task first; a missing or placeholder Goal, Acceptance criteria, Out of scope or Risk stops it before any agent starts (exit 4).
 - If the task is still unclear, the agent stops at intake and writes `questions.md` plus a NEEDS-INPUT handoff; `run-task.sh` prints the questions (exit 5). Answer them in `tasks/<id>.md`, commit on the base branch, and run again — if nothing was implemented yet, the worktree is recreated from the updated task.
+- If the plan exceeds `scripts/factory/complexity.env`, nothing is implemented: `run-task.sh` saves the proposed breakdown to `.agent-work/breakdowns/<id>.md` (exit 6). Review it, then `scripts/factory/create-tasks.sh .agent-work/breakdowns/<id>.md` commits `tasks/<id>.<n>.md`. See [breakdown.md](breakdown.md).
 
 ## `accept.sh`
 
 1. Prints the commits and diff stat.
 2. Blocks if the branch changed anything under `.github/`, `scripts/factory/`, `tasks/`, `AGENTS.md` or `install.sh` — re-run with `--allow-guardrails` only after reading those changes. This matters because the next step runs the **branch's** `setup.sh` and your check commands on your machine, and shell edits can bypass the agent's path rules.
-3. Runs `setup.sh` + `check.sh` in the branch's worktree (or a temporary one).
-4. Runs `test-hooks.sh` from the base checkout.
-5. Asks `Merge … [y/N]`, then `git merge --no-ff`.
+3. Blocks if the branch exceeds `scripts/factory/complexity.env` (`check-complexity.sh --diff`) — re-run with `--allow-large` to merge anyway.
+4. Runs `setup.sh` + `check.sh` in the branch's worktree (or a temporary one).
+5. Runs `test-hooks.sh` from the base checkout.
+6. Asks `Merge … [y/N]`, then `git merge --no-ff`.
 
 `accept.sh` is a convention: anyone with shell access can `git merge` by hand, and nothing enforces it. Never merge agent branches by hand without the same checks.
 
@@ -76,6 +78,7 @@ The factory never guesses requirements:
 - Read `handoff.md`: Status (READY, DRAFT or NEEDS-INPUT), unmet ACs, Decisions, Risks.
 - `review.md` has no unresolved `BLOCKING:` items.
 - Use `--allow-guardrails` only after reading each changed guardrail line.
+- Use `--allow-large` only when splitting would not make review easier.
 
 ## Troubleshooting
 

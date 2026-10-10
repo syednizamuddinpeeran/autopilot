@@ -12,6 +12,14 @@ Nothing was planned or changed, so there is nothing to push.
 - **Cloud agent**: do not commit code. Put the contents of `questions.md` in your final message (the PR
   description of your draft PR), titled `Questions: <issue title>`, and stop.
 
+## BREAKDOWN mode (the work exceeded the complexity limits)
+Nothing was implemented. The deliverable is `.agent-work/issue-N/breakdown.md`.
+- **Local CLI**: stop. Do not push or open a PR. `run-issue.sh` shows the breakdown and tells the human
+  how to create the sub-issues (`create-issues.sh`).
+- **Cloud agent**: do not commit code. Put the contents of `breakdown.md` in your final message (the PR
+  description of your draft PR), titled `Breakdown: <issue title>`. The human creates the sub-issues with
+  `create-issues.sh --from-pr <PR number>`, and stop.
+
 ## Preconditions
 - `verify-changes` passed in this session (unless opening a draft for a blocked run).
 - Branch is `agent/issue-N-*` (local) or `copilot/*` (cloud). Never `main`.

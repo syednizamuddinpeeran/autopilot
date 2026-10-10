@@ -4,13 +4,22 @@
 #
 #   scripts/factory/accept.sh add-csv-export                 # verify, then merge --no-ff
 #   scripts/factory/accept.sh add-csv-export --allow-guardrails   # you reviewed guardrail edits
+#   scripts/factory/accept.sh add-csv-export --allow-large        # merge although it exceeds complexity.env
 #
 # Run it from the main checkout (base branch checked out, clean tree). Agents are denied this
 # script by the guard hook.
 set -euo pipefail
 
-task="${1:?usage: accept.sh <task-id> [--allow-guardrails]}"
-allow_guardrails="${2:-}"
+task="${1:?usage: accept.sh <task-id> [--allow-guardrails] [--allow-large]}"
+shift
+allow_guardrails="" allow_large=""
+for a in "$@"; do
+  case "$a" in
+    --allow-guardrails) allow_guardrails="$a" ;;
+    --allow-large) allow_large=1 ;;
+    *) echo "unknown option: $a" >&2; exit 1 ;;
+  esac
+done
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
 # shellcheck disable=SC1091
@@ -33,6 +42,14 @@ if [[ -n "$guard_changes" && "$allow_guardrails" != "--allow-guardrails" ]]; the
   echo "Branch modifies guardrail files (review them, then re-run with --allow-guardrails):" >&2
   echo "$guard_changes" >&2
   exit 1
+fi
+
+# 1b. Size within scripts/factory/complexity.env (the base's script and limits).
+if ! bash scripts/factory/check-complexity.sh --diff "$base" "$branch"; then
+  if [[ -z "$allow_large" ]]; then
+    echo "Branch exceeds scripts/factory/complexity.env. Break the task down (create-tasks.sh), or re-run with --allow-large." >&2
+    exit 1
+  fi
 fi
 
 # 2. Verify the branch from its own worktree (or a temporary one), using the BASE's guardrails.

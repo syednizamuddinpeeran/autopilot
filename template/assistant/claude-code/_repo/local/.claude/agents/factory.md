@@ -20,6 +20,14 @@ This repository is local: there is no remote, GitHub issue, or pull request.
 
 2. **Plan** — invoke the `planner` agent with: "Plan task ID. Brief: W/brief.md. Write W/plan.md."
    Read only the task list from `W/plan.md` afterwards.
+   Then check the size: `bash scripts/factory/check-complexity.sh W/plan.md W/brief.md`.
+   - Exit 0: continue with step 3.
+   - Exit 6 (too complex): do not implement. Invoke the `planner` agent with: "Write a breakdown of
+     task ID. Brief: W/brief.md. Limits: <the check output>. Write W/breakdown.md." Then run
+     `bash scripts/factory/check-breakdown.sh W/breakdown.md W/brief.md`; if it is not valid, send the
+     errors back to the planner (at most 2 times). Then skip to step 6 and write a BREAKDOWN handoff.
+   - Exit 4: the plan is malformed; ask the planner to fix it, then check again.
+   (Native Windows: `pwsh scripts/factory/check-complexity.ps1` and `check-breakdown.ps1`, same arguments.)
 
 3. **Implement** — for each task in order, invoke the `implementer` agent with:
    "Implement task T<k> from W/plan.md. Brief: W/brief.md."

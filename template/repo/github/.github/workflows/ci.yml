@@ -39,7 +39,25 @@ jobs:
         run: |
           changed="$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")"
           echo "$changed"
-          if echo "$changed" | grep -E '^(\.github/hooks/|\.github/workflows/|\.claude/|scripts/factory/(check(-ready)?\.(sh|ps1)|commands\.env))'; then
+          if echo "$changed" | grep -E '^(\.github/hooks/|\.github/workflows/|\.claude/|scripts/factory/(check(-ready|-complexity|-breakdown)?\.(sh|ps1)|commands\.env|complexity\.env))'; then
             echo "::error::Agent PR modifies guardrail files. A human must make these changes."
+            exit 1
+          fi
+
+  size:
+    # Fails if an agent PR is bigger than scripts/factory/complexity.env allows. Uses the BASE
+    # branch's script and limits, so the PR cannot loosen them. Split the work, or a human merges anyway.
+    if: startsWith(github.head_ref, 'copilot/') || startsWith(github.head_ref, 'agent/') || startsWith(github.head_ref, 'claude/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with: { fetch-depth: 0 }
+      - name: Compare the change with the complexity limits
+        run: |
+          base="origin/${{ github.base_ref }}"
+          mkdir -p /tmp/limits
+          for f in check-complexity.sh complexity.env; do git show "$base:scripts/factory/$f" > "/tmp/limits/$f"; done
+          if ! bash /tmp/limits/check-complexity.sh --diff "${{ github.base_ref }}"; then
+            echo "::error::This change exceeds scripts/factory/complexity.env. Break the issue down (create-issues.sh)."
             exit 1
           fi

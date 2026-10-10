@@ -3,10 +3,11 @@
 #
 #   pwsh scripts/factory/accept.ps1 add-csv-export                      # verify, then merge --no-ff
 #   pwsh scripts/factory/accept.ps1 add-csv-export -AllowGuardrails     # you reviewed guardrail edits
+#   pwsh scripts/factory/accept.ps1 add-csv-export -AllowLarge          # merge although it exceeds complexity.env
 #
 # Run it from the main checkout (base branch checked out, clean tree). Agents are denied this
 # script by the guard hook.
-param([Parameter(Mandatory)][string]$Task, [switch]$AllowGuardrails)
+param([Parameter(Mandatory)][string]$Task, [switch]$AllowGuardrails, [switch]$AllowLarge)
 $ErrorActionPreference = 'Stop'
 $root = (git rev-parse --show-toplevel)
 Set-Location -LiteralPath $root
@@ -30,6 +31,13 @@ Write-Output '── files changed';     git diff --stat "$base...$branch"
 $guardChanges = git diff --name-only "$base...$branch" -- .github scripts/factory tasks AGENTS.md install.sh install.ps1
 if ($guardChanges -and -not $AllowGuardrails) {
   [Console]::Error.WriteLine("Branch modifies guardrail files (review them, then re-run with -AllowGuardrails):`n$($guardChanges -join "`n")")
+  exit 1
+}
+
+# 1b. Size within scripts/factory/complexity.env (the base's script and limits).
+& pwsh -NoProfile -File scripts/factory/check-complexity.ps1 --diff $base $branch
+if ($LASTEXITCODE -ne 0 -and -not $AllowLarge) {
+  [Console]::Error.WriteLine('Branch exceeds scripts/factory/complexity.env. Break the task down (create-tasks.ps1), or re-run with -AllowLarge.')
   exit 1
 }
 

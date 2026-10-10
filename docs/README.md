@@ -14,6 +14,7 @@ The pages below describe the default combination (`--repo github --assistant cop
 | Know why it is safe | [security-model.md](security-model.md) |
 | Know what *you* must check | [human-safety-checklist.md](human-safety-checklist.md) |
 | Understand Copilot CLI sandboxing | [sandboxing.md](sandboxing.md) |
+| Split work that is too big for one run | [breakdown.md](breakdown.md) |
 | Use it without GitHub (local repo) | [local-repo.md](local-repo.md) |
 | Run on Linux, WSL or native Windows | [platforms.md](platforms.md) |
 | Use Claude Code instead of Copilot | [claude-code.md](claude-code.md) |

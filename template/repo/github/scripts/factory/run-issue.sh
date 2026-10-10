@@ -8,7 +8,11 @@
 # Out of scope and Risk filled in by a human. If the agent still finds the requirements unclear, it
 # stops before planning and writes questions; this script shows them and can post them on the issue.
 #
-# Exit codes: 0 done, 2 no issue given, 4 issue not ready, 5 agent needs answers, other = CLI error.
+# If the plan exceeds scripts/factory/complexity.env, the agent proposes a breakdown instead of code; this
+# script shows it and how to create the sub-issues (create-issues.sh).
+#
+# Exit codes: 0 done, 2 no issue given, 4 issue not ready, 5 agent needs answers, 6 breakdown proposed,
+# other = CLI error.
 # Safety layers: separate worktree + agent/* branch, the CLI's sandbox (enable once with
 # /sandbox), CLI tool denies (agent-cli.sh), preToolUse guard hook, branch protection on GitHub.
 set -euo pipefail
@@ -67,7 +71,7 @@ cd "$wt"
 bash scripts/factory/setup.sh
 work=".agent-work/issue-${issue}"
 mkdir -p "$work"
-rm -f "$work/questions.md"
+rm -f "$work/questions.md" "$work/breakdown.md"
 printf '%s\n' "$json" > "$work/issue.json"
 
 prompt="Work GitHub issue #${issue} (${url}) from intake to pull request using your factory workflow.
@@ -94,5 +98,20 @@ if [[ -s "$work/questions.md" ]]; then
   fi
   echo "Update the issue with the answers (Goal / Acceptance criteria / Out of scope / Risk), then run again."
   exit 5
+fi
+
+# The plan exceeded the complexity limits: the agent proposed a breakdown instead of code.
+if [[ -s "$work/breakdown.md" ]]; then
+  saved="$root/.agent-work/breakdowns"; mkdir -p "$saved"
+  cp "$work/breakdown.md" "$saved/issue-${issue}.md"
+  [[ -f "$work/brief.md" ]] && cp "$work/brief.md" "$saved/issue-${issue}.brief.md"
+  echo
+  echo "── Issue #$issue is too big for one run (scripts/factory/complexity.env). Nothing was implemented."
+  echo "   Proposed breakdown: $saved/issue-${issue}.md"
+  echo
+  cat "$saved/issue-${issue}.md"
+  echo
+  echo "Review and edit it, then create the sub-issues:  scripts/factory/create-issues.sh $saved/issue-${issue}.md"
+  exit 6
 fi
 exit "$rc"

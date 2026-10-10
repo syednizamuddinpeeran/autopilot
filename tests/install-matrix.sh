@@ -37,6 +37,27 @@ run_one() {
       [[ $got -eq $want ]] || { echo "check-ready.ps1 $(basename "$fx"): want $want, got $got"; return 1; }
     fi
   done
+  # Complexity and breakdown checks: expected exit codes per fixture.
+  local d c
+  for d in "$root"/tests/fixtures/complexity/*/; do
+    c="$(basename "$d")"; want=6
+    case "$c" in ok|high-risk-single|two-areas) want=0 ;; no-estimate) want=4 ;; esac
+    bash scripts/factory/check-complexity.sh "$d/plan.md" "$d/brief.md" >/dev/null; got=$?
+    [[ $got -eq $want ]] || { echo "check-complexity $c: want $want, got $got"; return 1; }
+    if [[ "$os" == windows ]] && command -v pwsh >/dev/null; then
+      pwsh -NoProfile -File scripts/factory/check-complexity.ps1 "$d/plan.md" "$d/brief.md" >/dev/null; got=$?
+      [[ $got -eq $want ]] || { echo "check-complexity.ps1 $c: want $want, got $got"; return 1; }
+    fi
+  done
+  for fx in "$root"/tests/fixtures/breakdown/{ok,bad-*}.md; do
+    want=0; [[ "$(basename "$fx")" == bad-* ]] && want=4
+    bash scripts/factory/check-breakdown.sh "$fx" "$root/tests/fixtures/breakdown/brief.md" >/dev/null; got=$?
+    [[ $got -eq $want ]] || { echo "check-breakdown $(basename "$fx"): want $want, got $got"; return 1; }
+    if [[ "$os" == windows ]] && command -v pwsh >/dev/null; then
+      pwsh -NoProfile -File scripts/factory/check-breakdown.ps1 "$fx" "$root/tests/fixtures/breakdown/brief.md" >/dev/null; got=$?
+      [[ $got -eq $want ]] || { echo "check-breakdown.ps1 $(basename "$fx"): want $want, got $got"; return 1; }
+    fi
+  done
   local launcher=scripts/factory/run-issue.sh; [[ "$repo" == local ]] && launcher=scripts/factory/run-task.sh
   bash "$launcher" >/dev/null 2>&1; got=$?
   [[ $got -eq 2 ]] || { echo "$launcher without input: want exit 2, got $got"; return 1; }
