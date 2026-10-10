@@ -9,6 +9,7 @@ Agents live in `.github/agents/*.agent.md`; skills in `.github/skills/<name>/SKI
 | `factory` | read, search, edit, execute, agent, github/* | issue number | PR, `decisions.md` | Orchestrates only; never writes code itself; never asks questions mid-run |
 | `planner` | read, search, edit | brief path | `plan.md` | Read-only on code; may edit only the plan file; every AC maps to a task and a test |
 | `implementer` | read, search, edit, execute | one task from the plan | one Conventional Commit | Test first; smallest change; no new dependencies; never weakens tests; replies with a short summary |
+| `analyst` | read, search, edit (draft file only) | your brief, interactively | `.agent-work/drafts/<id>.md` | Asks one topic at a time; never invents requirements, numbers, defaults or scope; unanswered → `OPEN:`; records every Q&A; never runs commands or creates issues. Started by `new-draft` |
 | `reviewer` | read, search, execute, edit | brief path | `review.md` | Independent; judges against the brief (not the plan); `execute` for read-only commands only |
 
 ### Factory loop limits

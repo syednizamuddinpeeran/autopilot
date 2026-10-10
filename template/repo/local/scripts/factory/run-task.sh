@@ -27,10 +27,12 @@ if [[ $# -lt 1 || "$1" == -* ]]; then
   {
     echo "No task given. The factory only works on a task a human has written and reviewed."
     echo
-    echo "  1. cp tasks/_template.md tasks/<id>.md   and fill in Goal, testable Acceptance criteria,"
-    echo "     Out of scope (or \"None\") and Risk."
-    echo "  2. Commit it on '$base':  git add tasks && git commit -m \"task: <id>\""
-    echo "  3. Run:  scripts/factory/run-task.sh <id> [--watch]"
+    echo "  1. Draft it with the analyst, which asks you questions and assumes nothing:"
+    echo "       scripts/factory/new-draft.sh \"<short brief of what you want>\""
+    echo "     then review the draft and create the task (commits it on '$base'):"
+    echo "       scripts/factory/create-task.sh .agent-work/drafts/<id>.md"
+    echo "     (or copy tasks/_template.md to tasks/<id>.md, fill it in and commit it on '$base')."
+    echo "  2. Run:  scripts/factory/run-task.sh <id> [--watch]"
     tasks="$(git ls-tree --name-only "$base" tasks/ 2>/dev/null | sed -n 's|^tasks/\(.*\)\.md$|\1|p' | grep -v '^_' || true)"
     if [[ -n "$tasks" ]]; then
       echo

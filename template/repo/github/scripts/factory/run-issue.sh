@@ -17,8 +17,12 @@ if [[ $# -lt 1 || ! "$1" =~ ^[0-9]+$ ]]; then
   cat >&2 <<'MSG'
 No issue given. The factory only works on an issue a human has written and reviewed.
 
-  1. Create the issue with the "Agent task" form on GitHub (Issues → New issue → Agent task):
-     Goal, testable Acceptance criteria, Out of scope (or "None") and Risk.
+  1. Draft it with the analyst, which asks you questions and assumes nothing:
+       scripts/factory/new-draft.sh "<short brief of what you want>"
+     then review the draft and create the issue:
+       scripts/factory/create-issue.sh .agent-work/drafts/<id>.md
+     (or use the "Agent task" form on GitHub: Goal, testable Acceptance criteria,
+      Out of scope or "None", Risk).
   2. Run:  scripts/factory/run-issue.sh <issue-number> [--watch]
 MSG
   exit 2

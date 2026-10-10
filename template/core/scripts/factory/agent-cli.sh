@@ -1,16 +1,14 @@
 #!/usr/bin/env bash
-# Starts the coding assistant this repo was installed for (ASSISTANT in commands.env) with the
-# factory agent. Sourced by run-issue.sh / run-task.sh.
+# Starts the coding assistant this repo was installed for (ASSISTANT in commands.env).
+# Sourced by run-issue.sh / run-task.sh / new-draft.sh.
 #
-#   agent_cli <auto|--watch> <prompt> <shell command to deny>...     # returns the CLI's exit code
+#   agent_cli <auto|--watch> <prompt> <shell command to deny>...     # factory agent; returns the exit code
+#   agent_chat <agent> <prompt>                                      # interactive session with another agent
 #
 # The deny list is an extra CLI-level layer; the preToolUse guard hook enforces the full policy.
 # Flag names can change between CLI versions: check `copilot help permissions` / `claude --help`.
-agent_cli() {
-  local mode="$1" prompt="$2" c
-  shift 2
-  local flags=()
-  # Credentials the agent must never inherit (FORBIDDEN_ENV in commands.env, e.g. set by --cloud aws).
+# Credentials an agent must never inherit (FORBIDDEN_ENV in commands.env, e.g. set by --cloud aws).
+agent_preflight() {
   local v
   for v in ${FORBIDDEN_ENV:-}; do
     if [[ -n "${!v:-}" ]]; then
@@ -22,6 +20,29 @@ agent_cli() {
   if [[ -n "${FORBIDDEN_ENV:-}" && -e "$HOME/.aws/credentials" ]]; then
     echo "Note: $HOME/.aws/credentials exists. Make sure the CLI sandbox denies ~/.aws (docs/sandboxing.md)." >&2
   fi
+}
+
+agent_chat() {
+  local agent="$1" prompt="$2"
+  agent_preflight
+  case "${ASSISTANT:-copilot}" in
+    copilot)
+      command -v copilot >/dev/null || { echo "Missing: copilot" >&2; exit 1; }
+      copilot --agent "$agent" -i "$prompt"
+      ;;
+    claude-code)
+      command -v claude >/dev/null || { echo "Missing: claude" >&2; exit 1; }
+      claude --agent "$agent" "$prompt"
+      ;;
+    *) echo "Unknown ASSISTANT in commands.env: ${ASSISTANT}" >&2; exit 1 ;;
+  esac
+}
+
+agent_cli() {
+  local mode="$1" prompt="$2" c
+  shift 2
+  local flags=()
+  agent_preflight
   case "${ASSISTANT:-copilot}" in
     copilot)
       command -v copilot >/dev/null || { echo "Missing: copilot" >&2; exit 1; }

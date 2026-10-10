@@ -11,6 +11,7 @@ id_rsa|id_ed25519|\.pem$|\.p12$|\.pfx$
 # Guardrails and pipelines: humans change these
 write:\.github/hooks/
 write:scripts/factory/check(-ready)?\.(sh|ps1)
+write:scripts/factory/(new-draft|create-issue|create-task|agent-cli)\.(sh|ps1)
 write:scripts/factory/commands\.env
 write:\.agent-logs/
 write:\.git/

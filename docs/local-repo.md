@@ -39,8 +39,9 @@ cd ~/code/my-repo
 bash scripts/factory/test-hooks.sh && bash scripts/factory/check.sh
 git add -A && git commit -m "chore: add agent factory"
 
-cp tasks/_template.md tasks/add-csv-export.md   # fill in Goal, ACs, Out of scope, Pointers, Risk
-git add tasks && git commit -m "task: add-csv-export"
+scripts/factory/new-draft.sh "add CSV export"   # the analyst asks you questions; draft in .agent-work/drafts/
+scripts/factory/create-task.sh .agent-work/drafts/add-csv-export.md   # review → commits tasks/<id>.md
+# (or: cp tasks/_template.md tasks/add-csv-export.md, fill it in, commit it on the base branch)
 
 scripts/factory/run-task.sh add-csv-export            # autonomous
 scripts/factory/run-task.sh add-csv-export --watch    # interactive

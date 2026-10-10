@@ -14,8 +14,12 @@ if ($Issue -notmatch '^[0-9]+$') {
   [Console]::Error.WriteLine(@"
 No issue given. The factory only works on an issue a human has written and reviewed.
 
-  1. Create the issue with the "Agent task" form on GitHub (Issues -> New issue -> Agent task):
-     Goal, testable Acceptance criteria, Out of scope (or "None") and Risk.
+  1. Draft it with the analyst, which asks you questions and assumes nothing:
+       pwsh scripts/factory/new-draft.ps1 "<short brief of what you want>"
+     then review the draft and create the issue:
+       pwsh scripts/factory/create-issue.ps1 .agent-work/drafts/<id>.md
+     (or use the "Agent task" form on GitHub: Goal, testable Acceptance criteria,
+      Out of scope or "None", Risk).
   2. Run:  pwsh scripts/factory/run-issue.ps1 <issue-number> [-Watch]
 "@)
   exit 2

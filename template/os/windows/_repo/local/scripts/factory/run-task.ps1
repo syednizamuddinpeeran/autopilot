@@ -24,10 +24,12 @@ if (-not $Task) {
   $msg = @"
 No task given. The factory only works on a task a human has written and reviewed.
 
-  1. Copy tasks/_template.md to tasks/<id>.md and fill in Goal, testable Acceptance criteria,
-     Out of scope (or "None") and Risk.
-  2. Commit it on '$base':  git add tasks; git commit -m "task: <id>"
-  3. Run:  pwsh scripts/factory/run-task.ps1 <id> [-Watch]
+  1. Draft it with the analyst, which asks you questions and assumes nothing:
+       pwsh scripts/factory/new-draft.ps1 "<short brief of what you want>"
+     then review the draft and create the task (commits it on '$base'):
+       pwsh scripts/factory/create-task.ps1 .agent-work/drafts/<id>.md
+     (or copy tasks/_template.md to tasks/<id>.md, fill it in and commit it on '$base').
+  2. Run:  pwsh scripts/factory/run-task.ps1 <id> [-Watch]
 "@
   $tasks = @(git ls-tree --name-only $base tasks/ 2>$null | Where-Object { $_ -match '^tasks/([^_].*)\.md$' } | ForEach-Object { $_ -replace '^tasks/(.*)\.md$', '$1' })
   if ($tasks.Count) {

@@ -15,3 +15,4 @@ deny  edit edit task file         :: tasks/x.md
 @checkout main
 deny  sh   commit on main branch  :: git commit -am x
 @checkout -
+deny  sh   create task script     :: bash scripts/factory/create-task.sh .agent-work/drafts/x.md --yes
