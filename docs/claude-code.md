@@ -48,6 +48,7 @@ Notes:
 - The action only acts for users with write access by default; don't enable `allowed_non_write_users`.
 - On pull-request events it restores `.claude/` from the base branch, so a PR cannot swap in its own hooks.
 - Claude pushes to its `claude/*` branch and posts a link to open the PR; it does not merge.
+- If the issue is too big ([breakdown.md](breakdown.md)), Claude posts the proposed breakdown as a comment instead of code; create the sub-issues with `scripts/factory/create-issues.sh --from-issue <N>`.
 - The runner has the API key in its environment; the guard denies `printenv`/`env` and token echoes, but treat the workflow like any CI job that runs branch code.
 
 ## Sandboxing

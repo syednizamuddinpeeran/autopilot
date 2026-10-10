@@ -20,6 +20,7 @@ The agent is guarded, not trusted. These are the things only you can do.
 ## During / after a run
 - [ ] (Cloud) Read the diff *before* clicking **Approve and run workflows** — CI runs branch code.
 - [ ] Read the PR description: Ready vs Draft, unmet ACs, **Decisions** (implementation choices), **Risks / follow-ups**. Requirements are never assumed: if the agent asked questions, answer them in the issue.
+- [ ] If the agent proposed a breakdown: read every item before `create-issues` / `create-tasks` (each becomes a work item an agent will act on), check the dependencies, and that the items together deliver the whole parent issue.
 - [ ] Review denied actions — the agent was trying something:
   `jq -c 'select(.decision=="deny")' <worktree>/.agent-logs/*.jsonl` (local only; cloud logs are discarded).
 - [ ] Skim what the agent ran:

@@ -13,6 +13,9 @@ Write `.agent-work/<id>/plan.md` (`<id>` is `issue-N` or the task id) in this ex
 ## Approach
 <3–6 sentences: the design, and why it is the smallest change that works>
 
+## Size
+- Estimated lines changed: <n>   (added + removed, all files including tests; an honest estimate)
+
 ## Tasks
 ### T1: <imperative title>
 - Files: `path/a.ext`, `path/b.ext`
@@ -32,7 +35,10 @@ Write `.agent-work/<id>/plan.md` (`<id>` is `issue-N` or the task id) in this ex
 ```
 
 ## Rules
-- 1–6 tasks. Each task is one commit and fits comfortably in one focused session.
+- Each task is one commit and fits comfortably in one focused session. The limits on tasks, files,
+  estimated lines and areas are in `scripts/factory/complexity.env`; plan what the work really needs —
+  `check-complexity.sh` decides afterwards whether it must be broken down. Never squeeze a plan to fit.
+- List every file each task touches on its `Files:` / `Tests:` lines; the size check counts them.
 - Order tasks so the build and tests pass after every task.
 - Name real paths found by searching the repo. Mark new files as `(new)`.
 - No task may say "refactor" without a concrete reason tied to an AC.

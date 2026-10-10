@@ -23,7 +23,7 @@
 \bgit\s+config\s+(--global|--system)\b
 
 # --- Human-only steps: drafting and creating issues / tasks ---
-\b(new-draft|create-issue|create-task)\.(sh|ps1)\b
+\b(new-draft|create-issues?|create-tasks?)\.(sh|ps1)\b
 
 # --- Cloud / infra changes (agents never deploy) ---
 \bterraform\s+(apply|destroy|import|state)\b

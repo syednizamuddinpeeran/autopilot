@@ -17,3 +17,4 @@ deny  sh     create issue script    :: bash scripts/factory/create-issue.sh .age
 deny  sh     gh issue create        :: gh issue create --title x --body y
 deny  sh     gh issue comment       :: gh issue comment 7 --body hi
 allow sh     gh issue view          :: gh issue view 7 --comments
+deny  sh     create sub-issues      :: bash scripts/factory/create-issues.sh --from-pr 3 --yes

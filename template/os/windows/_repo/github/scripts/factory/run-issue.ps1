@@ -6,7 +6,9 @@
 #
 # The issue must be ready first (check-ready.ps1). If the agent still finds the requirements unclear,
 # it stops before planning and writes questions; this script shows them and can post them on the issue.
-# Exit codes: 0 done, 2 no issue given, 4 issue not ready, 5 agent needs answers, other = CLI error.
+# If the plan exceeds complexity.env, the agent proposes a breakdown instead of code (create-issues.ps1).
+# Exit codes: 0 done, 2 no issue given, 4 issue not ready, 5 agent needs answers, 6 breakdown proposed,
+# other = CLI error.
 param([string]$Issue, [switch]$Watch)
 $ErrorActionPreference = 'Stop'
 
@@ -63,7 +65,7 @@ Set-Location -LiteralPath $wt
 if ($LASTEXITCODE -ne 0) { throw 'setup.ps1 failed' }
 $work = ".agent-work/issue-$Issue"
 New-Item -ItemType Directory -Force -Path $work | Out-Null
-Remove-Item -LiteralPath "$work/questions.md" -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath "$work/questions.md", "$work/breakdown.md" -Force -ErrorAction SilentlyContinue
 Set-Content -LiteralPath "$work/issue.json" -Value $json -Encoding utf8
 
 $prompt = @"
@@ -90,5 +92,22 @@ if ((Test-Path -LiteralPath $q) -and (Get-Item -LiteralPath $q).Length -gt 0) {
   }
   Write-Output 'Update the issue with the answers (Goal / Acceptance criteria / Out of scope / Risk), then run again.'
   exit 5
+}
+
+# The plan exceeded the complexity limits: the agent proposed a breakdown instead of code.
+$bd = Join-Path $wt "$work/breakdown.md"
+if ((Test-Path -LiteralPath $bd) -and (Get-Item -LiteralPath $bd).Length -gt 0) {
+  $saved = Join-Path $root '.agent-work/breakdowns'; New-Item -ItemType Directory -Force -Path $saved | Out-Null
+  Copy-Item -LiteralPath $bd -Destination (Join-Path $saved "issue-$Issue.md") -Force
+  $br = Join-Path $wt "$work/brief.md"
+  if (Test-Path -LiteralPath $br) { Copy-Item -LiteralPath $br -Destination (Join-Path $saved "issue-$Issue.brief.md") -Force }
+  Write-Output ''
+  Write-Output "── Issue #$Issue is too big for one run (scripts/factory/complexity.env). Nothing was implemented."
+  Write-Output "   Proposed breakdown: $(Join-Path $saved "issue-$Issue.md")"
+  Write-Output ''
+  Get-Content -LiteralPath (Join-Path $saved "issue-$Issue.md")
+  Write-Output ''
+  Write-Output "Review and edit it, then create the sub-issues:  pwsh scripts/factory/create-issues.ps1 $(Join-Path $saved "issue-$Issue.md")"
+  exit 6
 }
 exit $rc

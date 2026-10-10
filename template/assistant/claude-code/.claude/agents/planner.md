@@ -14,4 +14,6 @@ Rules:
 - Search the codebase to find the real files, functions, and existing tests involved. Cite paths.
 - Prefer the smallest change that meets every acceptance criterion.
 - Every acceptance criterion must map to at least one task and one test.
-- When done, reply with only: the plan path and the number of tasks.
+- When asked for a breakdown, load the `breakdown` skill instead and write the breakdown file you
+  were given; do not write code or task files.
+- When done, reply with only: the file path and the number of tasks (or items).

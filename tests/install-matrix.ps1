@@ -21,6 +21,17 @@ foreach ($repo in (Get-ChildItem (Join-Path $root 'template/repo') -Directory).N
       & pwsh -NoProfile -File scripts/factory/check-ready.ps1 $fx.FullName | Out-Null
       if ($LASTEXITCODE -ne $want) { throw "check-ready.ps1 $($fx.Name): want $want, got $LASTEXITCODE" }
     }
+    foreach ($d in Get-ChildItem (Join-Path $root 'tests/fixtures/complexity') -Directory) {
+      $want = switch ($d.Name) { { $_ -in 'ok', 'high-risk-single', 'two-areas' } { 0 } 'no-estimate' { 4 } default { 6 } }
+      & pwsh -NoProfile -File scripts/factory/check-complexity.ps1 (Join-Path $d.FullName 'plan.md') (Join-Path $d.FullName 'brief.md') | Out-Null
+      if ($LASTEXITCODE -ne $want) { throw "check-complexity.ps1 $($d.Name): want $want, got $LASTEXITCODE" }
+    }
+    $bdDir = Join-Path $root 'tests/fixtures/breakdown'
+    foreach ($fx in Get-ChildItem $bdDir -Filter *.md | Where-Object { $_.Name -ne 'brief.md' }) {
+      $want = if ($fx.Name -like 'bad-*') { 4 } else { 0 }
+      & pwsh -NoProfile -File scripts/factory/check-breakdown.ps1 $fx.FullName (Join-Path $bdDir 'brief.md') | Out-Null
+      if ($LASTEXITCODE -ne $want) { throw "check-breakdown.ps1 $($fx.Name): want $want, got $LASTEXITCODE" }
+    }
     $launcher = if ($repo -eq 'local') { 'scripts/factory/run-task.ps1' } else { 'scripts/factory/run-issue.ps1' }
     & pwsh -NoProfile -File $launcher *> $null
     if ($LASTEXITCODE -ne 2) { throw "$launcher without input: want exit 2, got $LASTEXITCODE" }
