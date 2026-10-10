@@ -27,6 +27,8 @@ deny  view view .env            :: .env
 deny  view view abs ssh key     :: /root/.ssh/id_ed25519
 deny  edit edit readiness check   :: scripts/factory/check-ready.sh
 deny  sh   run new-draft          :: bash scripts/factory/new-draft.sh "add export"
+deny  sh   run a batch            :: bash scripts/factory/run-batch.sh 7 --auto-continue
+deny  edit edit run-batch         :: scripts/factory/run-batch.sh
 deny  edit edit agent launcher     :: scripts/factory/agent-cli.sh
 deny  edit edit complexity limits   :: scripts/factory/complexity.env
 deny  edit edit complexity check    :: scripts/factory/check-complexity.sh

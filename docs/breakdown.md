@@ -33,7 +33,7 @@ Agents cannot edit `complexity.env` or the check scripts (guard `deny-paths`). C
 | `run-task.sh` (local repo) | exit 6; `.agent-work/breakdowns/<id>.md` (+ `.brief.md`) | `scripts/factory/create-tasks.sh .agent-work/breakdowns/<id>.md` |
 
 `create-issues` validates again, previews every item and asks for confirmation (`--yes` skips the prompt). Using your `gh` credentials, it then:
-- creates the issues in dependency order, labelled `agent-ready`;
+- creates the issues in dependency order. Only items with no dependencies get the `agent-ready` label, because that label starts the Claude GitHub Action. Add it to the others when their blockers are merged;
 - adds them to the parent as native [sub-issues](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/adding-sub-issues);
 - records native [blocked-by dependencies](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-issue-dependencies);
 - comments the plan on the parent.
@@ -50,6 +50,25 @@ The agent runs `check-complexity` itself, so a misbehaving agent could skip it. 
 - GitHub: the `size` job in `ci.yml` runs on agent branches (`copilot/*`, `agent/*`, `claude/*`) and fails when the PR exceeds `MAX_FILES` / `MAX_EST_LINES` / `MAX_AREAS`.
 - Local: `accept.sh` refuses to merge an oversized branch unless you pass `--allow-large` (`-AllowLarge` in `accept.ps1`).
 
-## Running the items
+## Running the items: `run-batch`
 
-Run each item when the items it depends on are merged: `run-issue.sh <N>` / `run-task.sh <parent>.<n>`, or assign the unblocked issues to the cloud agent. Items without a dependency between them can run at the same time; each gets its own worktree and branch.
+An item is **ready** when everything it depends on is merged:
+- GitHub: the sub-issue is open and every issue it is blocked by is closed. Its PR closes it with `Closes #N`.
+- Local: every task on its `Depends on:` line was merged with `accept.sh`.
+
+```bash
+scripts/factory/run-batch.sh <parent> --list            # state of each item: ready, blocked by …, running, review, merged
+scripts/factory/run-batch.sh <parent>                   # run every ready item, up to MAX_PARALLEL at once
+scripts/factory/run-batch.sh <parent> --auto-continue   # …and keep starting items as you merge their blockers
+```
+`<parent>` is the parent issue number (GitHub) or task id (local). On Windows use `pwsh scripts/factory/run-batch.ps1 <parent> [-List] [-AutoContinue] [-Parallel <n>]`.
+
+- Each item runs as its own `run-issue.sh` / `run-task.sh` (autonomous), with its own agent, worktree and branch. Output goes to `.agent-logs/batch/<item>.log`. `--parallel <n>` overrides `MAX_PARALLEL`.
+- Without `--auto-continue`, the batch ends when the runs it could start have finished. Review and merge them, then run it again.
+- With `--auto-continue`, it checks every `BATCH_POLL_SECONDS` (default 60) for your merges and starts the items they unblock. It stops when every item is merged, or when nothing can move without you: an item stopped with questions, a breakdown or a failure.
+- Merging is never automatic. On GitHub each item is a normal PR; locally you run `accept.sh <parent>.<n>` (which also checks the size).
+- An item that already has a branch or worktree is not started again. Delete it to retry, or run `run-issue.sh` / `run-task.sh` for that item yourself.
+- Exit codes: 0 every run it started finished, 1 a run failed or stopped, 2 no items found.
+- Agents are denied `run-batch` (it starts more agents).
+
+**Cloud agent:** run `run-batch.sh <parent> --list` and assign the `ready` sub-issues to Copilot, or add the `agent-ready` label to start the Claude action on them. When their PRs are merged, run `--list` again.

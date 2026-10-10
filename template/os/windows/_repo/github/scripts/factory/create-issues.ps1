@@ -82,8 +82,11 @@ try {
       $out += $l
     }
     [System.IO.File]::WriteAllText($body, (($out -join "`n") + "`n"))
-    $url = gh issue create --title $title --body-file $body --label agent-ready 2>$null
-    if ($LASTEXITCODE -ne 0) {
+    # Only unblocked items get `agent-ready` (it starts the Claude action): label the others when their
+    # blockers are merged (run-batch.ps1 -List shows which are ready).
+    $blocked = [bool](Get-Content -LiteralPath (Join-Path $items "$i.deps") | Where-Object { $_ })
+    if (-not $blocked) { $url = gh issue create --title $title --body-file $body --label agent-ready 2>$null }
+    if ($blocked -or $LASTEXITCODE -ne 0) {
       $url = gh issue create --title $title --body-file $body
       if ($LASTEXITCODE -ne 0) { throw 'gh issue create failed' }
     }
@@ -103,8 +106,9 @@ try {
 
   gh issue comment $Parent --body "Broken down into $($order.Count) sub-issues (scripts/factory/create-issues.ps1):`n$summary`nEach runs as its own factory run once the issues it is blocked by are merged." | Out-Null
   Write-Output ''
-  Write-Output 'Done. Run them in dependency order: pwsh scripts/factory/run-issue.ps1 <N> for each,'
-  Write-Output 'or assign the unblocked ones to the cloud agent.'
+  Write-Output "Done. Run them locally in dependency order:  pwsh scripts/factory/run-batch.ps1 $Parent [-AutoContinue]"
+  Write-Output 'or assign the unblocked ones to the cloud agent. Only unblocked sub-issues got the agent-ready label;'
+  Write-Output 'add it to the others when their blockers are merged.'
 } finally {
   Remove-Item -Recurse -Force -LiteralPath $tmp -ErrorAction SilentlyContinue
 }

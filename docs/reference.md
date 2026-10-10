@@ -14,6 +14,7 @@
 | `create-task.sh <draft> [--id <slug>] [--yes]` | human only (local) | `check-ready`, preview, confirm, commit `tasks/<id>.md` on the base branch |
 | `create-issues.sh <breakdown> \| --from-pr <N> \| --from-issue <N> [--parent <N>] [--yes]` | human only (github) | `check-breakdown`, preview, confirm; creates the sub-issues in dependency order, links them as native sub-issues with blocked-by dependencies, comments on the parent. See [breakdown.md](breakdown.md) |
 | `create-tasks.sh <breakdown> [--yes]` | human only (local) | `check-breakdown`, preview, confirm; commits `tasks/<parent>.<n>.md` and a "Broken down into" list in the parent task |
+| `run-batch.sh <parent> [--auto-continue] [--list] [--parallel <n>]` | human | Runs the ready sub-issues / sub-tasks of a breakdown in dependency order, up to `MAX_PARALLEL` at once, each as its own `run-issue` / `run-task`; `--auto-continue` starts the next ones as you merge. See [breakdown.md](breakdown.md#running-the-items-run-batch) |
 | `complexity.env` | human edits | Limits that make an issue too big for one run. See [breakdown.md](breakdown.md) |
 | `check-complexity.sh <plan> <brief>` / `--diff <base> [<head>]` | factory agent, CI `size` job, `accept.sh` | Measures a plan (or a real diff) against `complexity.env`. Exit 0 within limits, 6 too complex, 4 plan malformed |
 | `check-breakdown.sh <breakdown> [brief] [--split <dir>]` | factory agent, create-issues, create-tasks | Items ready, numbered, dependencies valid and acyclic, parent ACs covered. Exit 0 valid, 4 invalid |

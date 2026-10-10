@@ -8,6 +8,8 @@
 | `too big for one run` (exit 6) | The plan exceeded `scripts/factory/complexity.env`; the planner proposed a breakdown; nothing was implemented | Review `.agent-work/breakdowns/…`, then `create-issues.sh` / `create-tasks.sh` ([breakdown.md](breakdown.md)), or raise the limits yourself |
 | `Breakdown is not valid` | An item is not ready, a dependency is missing or circular, or a parent AC is not covered | Edit the breakdown file and run `create-issues` / `create-tasks` again |
 | CI `size` fails / `accept.sh` says the branch exceeds `complexity.env` | The real diff is bigger than the limits | Split the work; or merge anyway (`accept.sh --allow-large`, or override the required check on GitHub) if splitting would not help review |
+| `run-batch` item says "needs you" | That run stopped with questions, a breakdown or an error | Read `.agent-logs/batch/<item>.log`; fix the item, delete its branch/worktree, run the batch again |
+| `run-batch --auto-continue` never ends | It waits for you to merge finished items | Merge them (PR / `accept.sh`), or stop it with Ctrl+C — runs already started keep their worktrees |
 | `new-draft.sh is interactive` | Run without a terminal (CI, pipe) | Run it in a terminal; it asks you questions |
 | `create-issue` / `create-task` says not ready | The draft still has `OPEN:` items or empty sections | Answer them (edit the draft or re-run `new-draft --id <id>`, which continues it) |
 | `No checks configured` (exit 3) | All commands empty in `commands.env` | Configure them, or `ALLOW_NO_CHECKS=1` for docs-only repos |

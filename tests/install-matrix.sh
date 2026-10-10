@@ -61,6 +61,8 @@ run_one() {
   local launcher=scripts/factory/run-issue.sh; [[ "$repo" == local ]] && launcher=scripts/factory/run-task.sh
   bash "$launcher" >/dev/null 2>&1; got=$?
   [[ $got -eq 2 ]] || { echo "$launcher without input: want exit 2, got $got"; return 1; }
+  bash scripts/factory/run-batch.sh >/dev/null 2>&1; got=$?
+  [[ $got -eq 2 ]] || { echo "run-batch.sh without input: want exit 2, got $got"; return 1; }
   if bash scripts/factory/check.sh >/dev/null 2>&1; then echo "check.sh passed with no checks configured"; return 1; fi
   sed -i 's/^ALLOW_NO_CHECKS=0/ALLOW_NO_CHECKS=1/' scripts/factory/commands.env
   bash scripts/factory/setup.sh >/dev/null || { echo "setup.sh failed"; return 1; }
