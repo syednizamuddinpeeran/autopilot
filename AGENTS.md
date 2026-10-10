@@ -18,6 +18,11 @@ Work on this repo runs under its own guard, independent of the one `install.sh` 
 `.github/hooks/` (scripts, `policy/`, `hook-cases.txt`), `.github/hooks/repo-harness.json` (Copilot)
 and `.claude/settings.json` (Claude Code). Tool calls are logged to `.agent-logs/` (not committed).
 
+Requirements: `git` and `jq` everywhere. On Windows, Claude Code runs the hooks through Git Bash
+(Git for Windows) and still needs `jq` (`winget install jqlang.jq`), or the guard blocks every
+tool call; Copilot uses the PowerShell 7 hooks (`guard.ps1`, `log.ps1`). Both guards share the
+same policy files and are tested by `tests/repo-harness.sh`.
+
 - Work on a branch (`agent/`, `copilot/`, `claude/`, `ccr-`, `part/`); never push to `main`.
   Changes reach `main` only through a reviewed PR with green CI.
 - Never force-push, skip hooks (`--no-verify`), merge PRs into `main`, or change repo settings,

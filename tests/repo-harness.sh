@@ -12,9 +12,10 @@ git add -A && git commit -qm init && git checkout -qb claude/test
 export FACTORY_LOG_DIR="$tmp/logs"
 
 pass=0 fail=0
+guard=(bash .github/hooks/scripts/guard.sh)
 run() { # run <want> <desc> <payload>
   local out rc got
-  out="$(bash .github/hooks/scripts/guard.sh <<<"$3" 2>/dev/null)"; rc=$?
+  out="$("${guard[@]}" <<<"$3" 2>/dev/null)"; rc=$?
   if [[ $rc -ne 0 || "$(jq -r '.permissionDecision // .hookSpecificOutput.permissionDecision // "allow"' <<<"${out:-{\}}")" == deny ]]; then got=deny; else got=allow; fi
   if [[ "$got" == "$1" ]]; then pass=$((pass + 1)); else fail=$((fail + 1)); echo "FAIL [$fmt] $2: want $1, got $got"; fi
 }
@@ -37,6 +38,21 @@ for fmt in copilot claude; do
     run "$want" "$desc" "$(payload "$kind" "$arg")"
   done < .github/hooks/hook-cases.txt
 done
+# The PowerShell guard (Windows) must decide the same, when pwsh is available.
+if command -v pwsh >/dev/null; then
+  guard=(pwsh -NoProfile -File .github/hooks/scripts/guard.ps1)
+  for fmt in copilot claude; do
+    while IFS= read -r line; do
+      [[ "$line" =~ ^[[:space:]]*(#|$) ]] && continue
+      read -r want kind _ <<<"$line"
+      desc="ps1: $(sed -E 's/^[a-z]+[[:space:]]+[a-z]+[[:space:]]+//; s/[[:space:]]*::.*$//' <<<"$line")"
+      run "$want" "$desc" "$(payload "$kind" "${line#*:: }")"
+    done < .github/hooks/hook-cases.txt
+  done
+  guard=(bash .github/hooks/scripts/guard.sh)
+else
+  echo "(pwsh not found: PowerShell guard not tested)"
+fi
 # Pushing is refused on main itself.
 git checkout -q main; fmt=claude
 run deny "push from main" "$(payload sh 'git push -u origin HEAD')"
