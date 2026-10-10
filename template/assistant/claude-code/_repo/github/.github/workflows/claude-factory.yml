@@ -1,0 +1,61 @@
+# Runs the factory agent with Claude Code (anthropics/claude-code-action) on GitHub:
+# when an issue gets the agent-ready label (the "Agent task" form adds it), or when someone with
+# write access comments "@claude" on an issue.
+#
+# One-time setup: install the Claude GitHub App on the repository and add the ANTHROPIC_API_KEY
+# repository secret (or CLAUDE_CODE_OAUTH_TOKEN; see the comment below). Give it no AWS or
+# production credentials. Docs: https://code.claude.com/docs/en/github-actions
+#
+# Claude works on a claude/* branch and pushes there; it does not open the PR itself. It posts a
+# link to open one, and branch protection still requires a human to approve and merge.
+name: Claude factory
+
+on:
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+
+jobs:
+  factory:
+    if: >-
+      (github.event_name == 'issues' && github.event.label.name == 'agent-ready') ||
+      (github.event_name == 'issue_comment' && !github.event.issue.pull_request &&
+       contains(github.event.comment.body, '@claude'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+        with: { fetch-depth: 0 }
+
+      # Uncomment the runtime(s) this project needs (keep in step with ci.yml):
+      # - uses: actions/setup-python@v6
+      #   with: { python-version: "3.12" }
+      # - uses: astral-sh/setup-uv@v6
+      # - uses: actions/setup-node@v5
+      #   with: { node-version: "22", cache: npm }
+      # - uses: actions/setup-java@v5
+      #   with: { distribution: temurin, java-version: "21" }
+
+      - name: Ensure jq
+        run: command -v jq || (sudo apt-get update && sudo apt-get install -y jq)
+
+      - name: Project setup
+        run: bash scripts/factory/setup.sh
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          label_trigger: agent-ready
+          # The hooks in .claude/settings.json (guard, logging, stop gate) run here too.
+          claude_args: |
+            --agent factory
+            --max-turns 200
+            --allowedTools "Bash,Edit,Write,Read,Glob,Grep,Agent,Skill"
+            --disallowedTools "Bash(git push --force *)" "Bash(gh pr merge *)" "Bash(sudo *)"

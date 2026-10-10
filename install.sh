@@ -1,47 +1,91 @@
 #!/usr/bin/env bash
-# Copy the agent-factory template into an existing repository.
-#   ./install.sh /path/to/repo           # skip files that already exist
-#   ./install.sh /path/to/repo --force   # overwrite template files
+# Install the agent factory into an existing git repository.
+#
+#   ./install.sh <target-repo> [--repo github|local] [--os linux|wsl|windows]
+#                [--assistant copilot|claude-code] [--cloud none|aws] [--force]
+#
+#   --repo   repository type                                            [default: github]
+#              github  GitHub issue → pull request (cloud agent or local CLI, CI, branch protection)
+#              local   task file → reviewed local branch, merged with accept.sh (no remote needed)
+#   --os     where agents run locally                                   [default: linux]
+#              linux, wsl  bash hooks and scripts (also what the cloud agent uses)
+#              windows     adds PowerShell 7 hooks and scripts (*.ps1); bash ones stay for the cloud agent
+#   --assistant  coding assistant that runs the agents                  [default: copilot]
+#              copilot      GitHub Copilot (cloud agent + Copilot CLI): .github/agents, skills, hooks
+#              claude-code  Claude Code (CLI + GitHub Action): .claude/agents, skills, settings.json
+#   --cloud  where the project deploys                                  [default: none]
+#              aws   deny AWS credential use and deploys; deploy-from-CI workflow (GitHub repos)
+#   --force  overwrite files that already exist in the target
+#
+# The template is built from layers under template/, applied in order:
+#   core → repo/<type> → os/<os> → assistant/<assistant> → cloud/<cloud>
+# A later layer's file replaces an earlier one at the same path, except files ending in
+# ".append", which are appended to the file of the same name without the suffix.
+# A layer's _repo/<type>/ and _os/<os>/ folders are applied right after it, only for that repo type / OS.
 set -euo pipefail
 src="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-dst="${1:?usage: install.sh <target-repo> [--force]}"
-force="${2:-}"
+
+usage() { sed -n '2,26p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+
+dst="" repo="github" os="linux" assistant="copilot" cloud="none" force=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --repo)   repo="${2:?--repo needs a value}"; shift 2 ;;
+    --repo=*) repo="${1#*=}"; shift ;;
+    --os)     os="${2:?--os needs a value}"; shift 2 ;;
+    --os=*)   os="${1#*=}"; shift ;;
+    --assistant)   assistant="${2:?--assistant needs a value}"; shift 2 ;;
+    --assistant=*) assistant="${1#*=}"; shift ;;
+    --cloud)   cloud="${2:?--cloud needs a value}"; shift 2 ;;
+    --cloud=*) cloud="${1#*=}"; shift ;;
+    --force)  force=1; shift ;;
+    -h|--help) usage 0 ;;
+    -*) echo "Unknown option: $1" >&2; usage 1 ;;
+    *)  [[ -z "$dst" ]] || { echo "Only one target allowed" >&2; usage 1; }; dst="$1"; shift ;;
+  esac
+done
+[[ -n "$dst" ]] || usage 1
 [[ -d "$dst/.git" ]] || { echo "$dst is not a git repository" >&2; exit 1; }
 
-files=(
-  AGENTS.md
-  .github/agents/factory.agent.md
-  .github/agents/planner.agent.md
-  .github/agents/implementer.agent.md
-  .github/agents/reviewer.agent.md
-  .github/skills/issue-intake/SKILL.md
-  .github/skills/implementation-plan/SKILL.md
-  .github/skills/verify-changes/SKILL.md
-  .github/skills/open-pr/SKILL.md
-  .github/hooks/factory.json
-  .github/hooks/policy/deny-commands.txt
-  .github/hooks/policy/deny-paths.txt
-  .github/hooks/scripts/common.sh
-  .github/hooks/scripts/log.sh
-  .github/hooks/scripts/guard.sh
-  .github/hooks/scripts/stop-gate.sh
-  .github/workflows/copilot-setup-steps.yml
-  .github/workflows/ci.yml
-  .github/ISSUE_TEMPLATE/agent-task.yml
-  .github/pull_request_template.md
-  scripts/factory/commands.env
-  scripts/factory/check.sh
-  scripts/factory/setup.sh
-  scripts/factory/run-issue.sh
-  scripts/factory/test-hooks.sh
-)
+case "$os" in linux|wsl|windows) ;; *) echo "Unknown --os: $os (linux, wsl, windows)" >&2; exit 1 ;; esac
+[[ -d "$src/template/repo/$repo" && "$repo" != _* ]] || { echo "Unknown --repo: $repo ($(ls "$src/template/repo" | tr '\n' ' '))" >&2; exit 1; }
+[[ "$cloud" == none || ( -d "$src/template/cloud/$cloud" && "$cloud" != _* ) ]] || { echo "Unknown --cloud: $cloud (none $(ls "$src/template/cloud" | tr '\n' ' '))" >&2; exit 1; }
+[[ -d "$src/template/assistant/$assistant" && "$assistant" != _* ]] || { echo "Unknown --assistant: $assistant ($(ls "$src/template/assistant" | tr '\n' ' '))" >&2; exit 1; }
 
-for f in "${files[@]}"; do
-  if [[ -e "$dst/$f" && "$force" != "--force" ]]; then
+# Layers in order; missing optional layers (e.g. os/linux) are skipped.
+layers=()
+for l in core "repo/$repo" "os/$os" "assistant/$assistant" "cloud/$cloud"; do
+  [[ -d "$src/template/$l" ]] || continue
+  layers+=("$l")
+  for sub in "_repo/$repo" "_os/$os"; do
+    [[ -d "$src/template/$l/$sub" ]] && layers+=("$l/$sub")
+  done
+done
+
+# Compose the layers into a staging tree.
+stage="$(mktemp -d)"; trap 'rm -rf "$stage"' EXIT
+for l in "${layers[@]}"; do
+  (cd "$src/template/$l" && find . -path './_*' -prune -o -type f -print0) | while IFS= read -r -d '' f; do
+    f="${f#./}"
+    if [[ "$f" == *.append ]]; then
+      t="${f%.append}"
+      [[ -f "$stage/$t" ]] || { echo "template/$l/$f has no base file $t" >&2; exit 1; }
+      cat "$src/template/$l/$f" >> "$stage/$t"
+    else
+      mkdir -p "$stage/$(dirname "$f")"
+      cp "$src/template/$l/$f" "$stage/$f"
+    fi
+  done
+done
+
+# Copy into the target.
+(cd "$stage" && find . -type f -print | sort) | while IFS= read -r f; do
+  f="${f#./}"
+  if [[ -e "$dst/$f" && $force -eq 0 ]]; then
     echo "skip (exists): $f"; continue
   fi
   mkdir -p "$dst/$(dirname "$f")"
-  cp "$src/$f" "$dst/$f"
+  cp "$stage/$f" "$dst/$f"
   echo "added: $f"
 done
 
@@ -51,8 +95,16 @@ gi="$dst/.gitignore"
 for line in ".agent-logs/" ".agent-work/"; do
   grep -qxF "$line" "$gi" 2>/dev/null || echo "$line" >> "$gi"
 done
-chmod +x "$dst"/.github/hooks/scripts/*.sh "$dst"/scripts/factory/*.sh
+chmod +x "$dst"/.github/hooks/scripts/*.sh "$dst"/scripts/factory/*.sh 2>/dev/null || true
 
 echo
+echo "Installed: repo=$repo os=$os assistant=$assistant cloud=$cloud"
 echo "Next: edit $dst/scripts/factory/commands.env and the Project section of $dst/AGENTS.md,"
-echo "then run: (cd $dst && bash scripts/factory/test-hooks.sh && bash scripts/factory/check.sh)"
+if [[ "$os" == "windows" ]]; then
+  echo "then run: (cd $dst; pwsh scripts/factory/test-hooks.ps1; pwsh scripts/factory/check.ps1)"
+else
+  echo "then run: (cd $dst && bash scripts/factory/test-hooks.sh && bash scripts/factory/check.sh)"
+fi
+if [[ "$repo" == "local" ]]; then
+  echo "Then commit, write a task from tasks/_template.md, commit it, and run scripts/factory/run-task.sh <id>."
+fi

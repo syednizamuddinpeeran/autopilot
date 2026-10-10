@@ -1,0 +1,3 @@
+
+# ===== OS: windows, repo type: github =====
+allow sh   ps push current branch  :: git push -u origin HEAD; gh pr create --fill

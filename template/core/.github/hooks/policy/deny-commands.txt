@@ -1,0 +1,41 @@
+# Extended regexes (case-insensitive) matched against every shell command the agent runs.
+# One per line. Lines starting with # are comments. A match = the command is denied.
+# Tune per project; agents cannot edit this file (it is in deny-paths.txt).
+
+# --- Destructive filesystem ---
+\brm\s+(-[a-z]*\s+)*(/|~|\$HOME|/\*|\.\.)(\s|$)
+\bmkfs\b
+\bdd\s+if=.*of=/dev/
+:\(\)\s*\{\s*:\|:&\s*\};:
+
+# --- Privilege escalation / host changes ---
+\bsudo\b
+\bsu\s+-?\s*$
+\bchmod\s+(-R\s+)?777\b
+\bdocker\s+run\b.*--privileged
+
+# --- Remote code execution patterns ---
+\b(curl|wget)\b[^|]*\|\s*(sudo\s+)?(ba|z|)sh\b
+\bbash\s+<\(\s*(curl|wget)
+
+# --- Git history safety (repo-type rules are appended at the end of this file) ---
+\bgit\s+(filter-branch|filter-repo)\b
+\bgit\s+config\s+(--global|--system)\b
+
+# --- Cloud / infra changes (agents never deploy) ---
+\bterraform\s+(apply|destroy|import|state)\b
+\b(cdk|npx\s+cdk)\s+(deploy|destroy|bootstrap)\b
+\bpulumi\s+(up|destroy)\b
+\bsam\s+deploy\b
+\baws\s+\S+\s+(delete|terminate|remove|put|create|update|attach|detach|modify|deregister)-
+\bkubectl\s+(delete|apply|replace|scale|drain)\b
+\bhelm\s+(install|upgrade|uninstall|delete)\b
+
+# --- Secret access ---
+\b(cat|less|more|head|tail|bat|nl|strings|xxd|grep|awk|sed|cp|scp)\b[^|;&]*(\.env(\.|\s|$)|id_rsa|id_ed25519|\.ssh/|\.aws/credentials|\.npmrc|\.pypirc|\.netrc|\.git-credentials)
+^\s*(env|printenv|set)\s*$
+\bprintenv\b.*(TOKEN|SECRET|KEY|PASSWORD)
+\becho\s+.*\$\{?[A-Z_]*(TOKEN|SECRET|PASSWORD|API_KEY)
+
+# --- Audit log tampering ---
+(\brm\b|\bmv\b|\btruncate\b|\bshred\b|sed\s+-i|>\s*)[^|;&]*\.agent-logs

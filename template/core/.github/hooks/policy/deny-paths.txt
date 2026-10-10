@@ -1,0 +1,17 @@
+# Extended regexes matched against file paths in edit/create/view tool arguments.
+# Prefix a line with "write:" to block only writes (edit/create); otherwise reads are blocked too.
+
+# Secrets: never read or write
+(^|/)\.env(\..*)?$
+id_rsa|id_ed25519|\.pem$|\.p12$|\.pfx$
+(^|/)\.ssh/
+\.aws/credentials
+(^|/)\.(npmrc|pypirc|netrc|git-credentials)$
+
+# Guardrails and pipelines: humans change these
+write:\.github/hooks/
+write:scripts/factory/check\.(sh|ps1)
+write:scripts/factory/commands\.env
+write:\.agent-logs/
+write:\.git/
+# Repo-type rules are appended below.

@@ -1,107 +1,76 @@
-# Agent Factory Template (GitHub Copilot)
+# Autopilot — Agent Factory Template
 
-Reusable setup that takes a GitHub issue to a reviewed pull request with Copilot agents,
-running with full tool permissions inside guardrails, with every agent action logged.
+Reusable setup that takes a piece of work — a GitHub issue or a local task file — to a verified, reviewed change, with coding agents running autonomously inside guardrails and every action logged. A human always merges.
 
 ```
-Issue (agent-task form)
+Issue / task file
   └─ factory agent (orchestrator, small context)
-       ├─ skill: issue-intake        → .agent-work/issue-N/brief.md
-       ├─ planner subagent           → plan.md         (read-only on code)
-       ├─ implementer subagent ×T    → 1 commit per task, test-first
-       ├─ skill: verify-changes      → scripts/factory/check.sh
-       ├─ reviewer subagent          → review.md       (independent, read-only)
-       └─ skill: open-pr             → PR "Closes #N", human merges
-Hooks on every step → .agent-logs/<session>.jsonl
+       ├─ skill: issue-intake | task-intake  → .agent-work/<id>/brief.md
+       ├─ planner subagent                    → plan.md        (read-only on code)
+       ├─ implementer subagent ×T             → 1 commit per task, test-first
+       ├─ skill: verify-changes               → scripts/factory/check.sh
+       ├─ reviewer subagent                   → review.md      (independent)
+       └─ skill: open-pr | handoff            → PR "Closes #N" | handoff.md
+Hooks on every tool call → guard (allow/deny) + audit log; stop gate until verified
+Human merges: branch protection + CI | accept.sh
 ```
 
-Same files drive both surfaces: **Copilot cloud agent** (assign the issue on GitHub) and **Copilot CLI** (local, WSL).
+## One template, your combination
+
+```bash
+./install.sh ~/code/my-repo [--repo github|local] [--os linux|wsl|windows] \
+                            [--assistant copilot|claude-code] [--cloud none|aws]
+pwsh ./install.ps1 C:\code\my-repo [-Repo …] [-Os …] [-Assistant …] [-Cloud …]   # same result
+```
+
+| Choice | Options | Docs |
+|---|---|---|
+| Repo type | `github` (default): issue → PR, cloud agent or local CLI, CI + branch protection · `local`: task file → local branch, no remote | [usage-guide](docs/usage-guide.md), [local-repo](docs/local-repo.md) |
+| OS | `linux` / `wsl`: bash · `windows`: + PowerShell 7 hooks and scripts | [platforms](docs/platforms.md) |
+| Assistant | `copilot` (default): Copilot cloud agent + CLI · `claude-code`: Claude Code CLI + GitHub Action | [claude-code](docs/claude-code.md) |
+| Cloud | `none` (default) · `aws`: credential-free agents, AWS deny rules, OIDC deploy from CI | [aws](docs/aws.md) |
+
+Full option reference: [docs/install.md](docs/install.md). Start here: [docs/README.md](docs/README.md).
 
 ## Why this is safe with "allow all"
 
-| Layer | What it stops | Where |
-|---|---|---|
-| Isolation | Agent touching your main checkout or machine | Cloud: ephemeral VM. Local: git worktree + CLI sandbox |
-| Guard hook (`preToolUse`) | Force-push, push to main, deploys, `sudo`, secret reads, curl\|sh, editing hooks/workflows, log tampering | `.github/hooks/scripts/guard.sh` + `policy/*.txt` |
-| Stop gate (`agentStop`) | Finishing with unverified changes | `stop-gate.sh` + `check.sh` marker |
-| CI | Anything the agent claims but didn't do | `.github/workflows/ci.yml` |
-| Branch protection | Agent merging its own work | GitHub settings (below) |
-| No standing secrets | Credential theft / cloud damage | Don't give agents AWS or prod credentials |
+| Layer | What it stops |
+|---|---|
+| Isolation | Cloud: ephemeral runner, own branch. Local: git worktree + CLI sandbox |
+| Guard hook (`preToolUse`) | Force-push / push to base, deploys, `sudo`, secret reads, `curl \| sh`, editing hooks/policy/workflows/agents, log tampering — same policy files for bash and PowerShell, Copilot and Claude Code |
+| Stop gate | Finishing with changes that have not passed `check.sh` since the last edit |
+| CI / `accept.sh` | Claims the agent did not earn; agent changes to guardrail files |
+| Branch protection / human merge | Agents merging their own work |
+| No standing credentials | Credential theft and cloud damage (`--cloud aws` enforces it for local runs) |
 
-The guard is fail-closed on errors, but a hook **timeout is fail-open** — keep the scripts fast.
-Deny-lists reduce risk; they are not a complete sandbox. Isolation and branch protection are the real boundary.
+Deny-lists reduce risk; they are not a sandbox. Isolation, keeping credentials out, and the human merge are the real boundary. Details: [security-model](docs/security-model.md), [human-safety-checklist](docs/human-safety-checklist.md).
 
-## One-time setup
-
-### GitHub (per repo, or once at org level)
-1. Enable Copilot cloud agent for the repo.
-2. Branch protection / ruleset on `main`: require PR, ≥1 human approval, required checks
-   `verify`, `hooks-selftest`, `guardrails-unchanged`; block force-push; no bypass for bots.
-3. Keep the cloud agent firewall at its default (GitHub + package registries). Add hosts only when needed.
-4. Do not add AWS or production secrets to the `copilot` environment.
-
-### Your machine (WSL Ubuntu)
-```bash
-sudo apt-get install -y git jq
-# GitHub CLI: https://cli.github.com   Copilot CLI: npm install -g @github/copilot
-gh auth login
-copilot          # sign in, then inside the session:
-/sandbox enable  # turn on local sandboxing (persists in settings)
-/sandbox policy  # deny ~/.ssh and ~/.aws; keep the working directory read/write
-```
-Keep repos in the WSL filesystem (`~/code/...`), not `/mnt/c/...` — faster, and hooks run as bash.
-
-## Per-project changes (the only things you edit)
-1. `scripts/factory/commands.env` — setup, format, lint, typecheck, test, build commands (presets included).
-2. `AGENTS.md` → **Project** section — what the repo is, layout, conventions.
-3. `.github/workflows/copilot-setup-steps.yml` and `ci.yml` — uncomment the language runtime.
-
-Optional: tune `.github/hooks/policy/deny-*.txt`, pin `model:` per agent, add project-specific skills in `.github/skills/`.
-
-Install into an existing repo:
-```bash
-./install.sh ~/code/my-repo
-cd ~/code/my-repo && bash scripts/factory/test-hooks.sh && bash scripts/factory/check.sh
-```
-
-## Running
-
-**Cloud (recommended for autonomy):** create an issue with the *Agent task* form → Assign to Copilot →
-choose the **factory** agent. It works on a `copilot/*` branch and opens the PR.
-
-**Local (WSL):**
-```bash
-scripts/factory/run-issue.sh 42          # autonomous run in ../<repo>-worktrees/issue-42
-scripts/factory/run-issue.sh 42 --watch  # interactive; switch to autopilot yourself
-```
-Flag names (`--agent`, `-p`, `--allow-all-tools`, `--deny-tool`) can change between CLI versions —
-check `copilot help permissions` once and adjust `run-issue.sh` if needed.
-
-## Logs
-- Local: `.agent-logs/<sessionId>.jsonl` (one JSON line per event) and `.agent-logs/index.jsonl` (session start/end).
-- Cloud: the sandbox is destroyed after the job, so hook logs there are discarded. Use the agent
-  session log on GitHub, or later add an `http` hook to ship logs out.
+## Quick start (GitHub + Copilot)
 
 ```bash
-jq -c 'select(.event=="preToolUse") | {ts, tool: .toolName, decision, reason}' .agent-logs/*.jsonl
-jq -c 'select(.decision=="deny")' .agent-logs/*.jsonl          # everything the guard blocked
-jq -c 'select(.event|test("subagent")) | {ts, event, agentName}' .agent-logs/*.jsonl
+./install.sh ~/code/my-repo && cd ~/code/my-repo
+# edit scripts/factory/commands.env and the Project section of AGENTS.md
+bash scripts/factory/test-hooks.sh && bash scripts/factory/check.sh
+git add -A && git commit -m "chore: add agent factory" && git push
 ```
+Then: enable the Copilot cloud agent, protect `main` ([usage-guide §4](docs/usage-guide.md#4-one-time-github-setup)), create an issue with the **Agent task** form and assign it to Copilot with the **factory** agent — or run it locally with `scripts/factory/run-issue.sh <N>`.
 
-## Files
+## This repository
+
 ```
-AGENTS.md                         always-loaded rules (kept short)
-.github/agents/*.agent.md         factory, planner, implementer, reviewer
-.github/skills/*/SKILL.md         loaded only when needed → clean context
-.github/hooks/factory.json        hook wiring for all events
-.github/hooks/scripts/            log.sh, guard.sh, stop-gate.sh, common.sh
-.github/hooks/policy/             deny-commands.txt, deny-paths.txt
-.github/workflows/                copilot-setup-steps.yml, ci.yml
-.github/ISSUE_TEMPLATE/           agent-task.yml
-scripts/factory/                  commands.env, check.sh, setup.sh, run-issue.sh, test-hooks.sh
+install.sh, install.ps1           compose the layers and copy them into a target repo
+template/core/                    files every installation gets
+template/repo/{github,local}/     repo types
+template/os/windows/              PowerShell 7 hooks and scripts
+template/assistant/{copilot,claude-code}/   agents, skills and hook wiring per assistant
+template/cloud/aws/               AWS guardrails and deploy workflow
+tests/                            install-matrix.sh/.ps1, installer-parity.sh, check-assistant-sync.sh, check-links.sh
+.github/workflows/selftest.yml    CI for this repo only (not installed)
+docs/                             documentation
 ```
+How layers combine: [docs/install.md](docs/install.md#how-the-template-is-built-for-maintainers). Contributor rules: [AGENTS.md](AGENTS.md).
 
 ## Known limits
-- Edits made through shell commands (e.g. `sed -i`) bypass path rules, but the stop gate and CI still catch unverified changes.
+- Shell is expressive: edits through `sed -i`, scripts or other runtimes can bypass path rules. The stop gate, CI / `accept.sh` and your review catch unverified or guardrail changes.
+- A Copilot hook timeout lets the call through; Claude Code's guard is wired to block on failure.
 - `.env.example` is blocked by the `.env` rule; rename it (e.g. `env.example`) or edit `deny-paths.txt`.
-- Native Windows needs PowerShell versions of the hooks; this template targets WSL, macOS, Linux, and the cloud agent.

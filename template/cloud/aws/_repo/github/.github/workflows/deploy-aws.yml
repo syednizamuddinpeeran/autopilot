@@ -1,0 +1,55 @@
+# Deploys to AWS after a human merges to main. The only place AWS credentials exist:
+# short-lived OIDC credentials for one IAM role, in a protected environment. Agents never get them
+# (no AWS secrets for the cloud agent or the Claude action; local runs refuse AWS_* variables).
+#
+# One-time setup (see docs/aws.md):
+#   1. AWS: add GitHub as an OIDC identity provider (token.actions.githubusercontent.com) and create
+#      a deploy role whose trust policy requires
+#        aud = sts.amazonaws.com
+#        sub = repo:<OWNER>/<REPO>:environment:production
+#      with only the permissions the deploy needs.
+#   2. GitHub: create the "production" environment with required reviewers and
+#      "Deployment branches: main only"; add environment variables AWS_ROLE_ARN and AWS_REGION.
+#   3. Fill in the deploy command below. Keep agents from editing this file (guard + CI + CODEOWNERS).
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-aws
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: read
+      id-token: write   # OIDC token for AWS; grants no GitHub write access
+    steps:
+      - uses: actions/checkout@v5
+
+      # Uncomment the runtime(s) this project needs (keep in step with ci.yml):
+      # - uses: actions/setup-node@v5
+      #   with: { node-version: "22", cache: npm }
+
+      - name: Verify
+        run: bash scripts/factory/setup.sh && bash scripts/factory/check.sh
+
+      - name: AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502  # pinned as in GitHub's OIDC docs
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Deploy
+        run: |
+          echo "Fill in your deploy command, e.g.:"
+          echo "  npx cdk deploy --all --require-approval never"
+          echo "  sam deploy --no-confirm-changeset --no-fail-on-empty-changeset"
+          echo "  terraform apply -auto-approve"
+          exit 1

@@ -1,0 +1,50 @@
+# CI for this template repository itself. The workflows that get installed into
+# target repositories live under template/ and do not run here.
+name: Template self-test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  install-matrix:
+    # Bash tests for every repo type × os; PowerShell tests too (pwsh is preinstalled here).
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Ensure jq
+        run: command -v jq || (sudo apt-get update && sudo apt-get install -y jq)
+      - run: pwsh --version
+      - run: bash tests/install-matrix.sh
+      - run: bash tests/installer-parity.sh
+
+  windows:
+    # Native Windows: install.ps1 and the PowerShell hooks/scripts.
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - run: pwsh -NoProfile -File tests/install-matrix.ps1
+        shell: pwsh
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - run: |
+          find . -name '*.sh' -not -path './.git/*' -print0 \
+            | xargs -0 shellcheck --severity=warning --shell=bash
+
+  docs-links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - run: bash tests/check-links.sh
+      - run: bash tests/check-assistant-sync.sh

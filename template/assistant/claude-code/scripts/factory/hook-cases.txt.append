@@ -1,0 +1,6 @@
+
+# ===== Assistant: claude-code =====
+deny  edit edit claude settings   :: .claude/settings.json
+deny  create add claude agent     :: .claude/agents/evil.md
+deny  edit edit CLAUDE.md         :: CLAUDE.md
+allow view view claude settings   :: .claude/settings.json
