@@ -11,3 +11,4 @@
 \bgh\s+auth\s+(token|refresh|login|logout)\b
 \bgh\s+api\b.*(-X|--method)\s*(DELETE|PUT|PATCH)
 \bgh\s+workflow\s+(run|enable|disable)\b
+\bgh\s+issue\s+(create|edit|close|reopen|delete|comment|transfer|lock|unlock|pin|unpin|develop)\b

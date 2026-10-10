@@ -1,4 +1,4 @@
-# Agent Factory — Documentation
+# autocode-harness — Documentation
 
 A GitHub issue (or a local task file) goes in; a verified, reviewed change comes out. A human merges it. Runs with GitHub Copilot or Claude Code, in the cloud or locally on Linux, WSL or Windows.
 
@@ -14,6 +14,7 @@ The pages below describe the default combination (`--repo github --assistant cop
 | Know why it is safe | [security-model.md](security-model.md) |
 | Know what *you* must check | [human-safety-checklist.md](human-safety-checklist.md) |
 | Understand Copilot CLI sandboxing | [sandboxing.md](sandboxing.md) |
+| Split work that is too big for one run | [breakdown.md](breakdown.md) |
 | Use it without GitHub (local repo) | [local-repo.md](local-repo.md) |
 | Run on Linux, WSL or native Windows | [platforms.md](platforms.md) |
 | Use Claude Code instead of Copilot | [claude-code.md](claude-code.md) |

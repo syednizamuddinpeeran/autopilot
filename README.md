@@ -1,4 +1,4 @@
-# Autopilot — Agent Factory Template
+# autocode-harness — AI coding-agent harness
 
 Reusable setup that takes a piece of work — a GitHub issue or a local task file — to a verified, reviewed change, with coding agents running autonomously inside guardrails and every action logged. A human always merges.
 
@@ -74,3 +74,7 @@ How layers combine: [docs/install.md](docs/install.md#how-the-template-is-built-
 - Shell is expressive: edits through `sed -i`, scripts or other runtimes can bypass path rules. The stop gate, CI / `accept.sh` and your review catch unverified or guardrail changes.
 - A Copilot hook timeout lets the call through; Claude Code's guard is wired to block on failure.
 - `.env.example` is blocked by the `.env` rule; rename it (e.g. `env.example`) or edit `deny-paths.txt`.
+
+## License
+
+[MIT](LICENSE). The installer copies only `template/`, so the files it adds to your repository carry no license of their own; they are yours.

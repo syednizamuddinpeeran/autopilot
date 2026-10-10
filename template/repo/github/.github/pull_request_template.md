@@ -8,6 +8,6 @@ Closes #
 ## Verification
 `scripts/factory/check.sh` — passed / failed
 
-## Assumptions
+## Decisions
 
 ## Risks / follow-ups

@@ -8,7 +8,17 @@
 | `agent-cli.sh` / `.ps1` | run-issue, run-task | Starts `copilot` or `claude` with the factory agent and CLI-level denies, per `ASSISTANT` |
 | `setup.sh` | run-issue, setup job, CI, agents | Requires `git`, `jq`; `chmod +x` scripts; creates `.agent-logs`, `.agent-work`; runs `SETUP_CMD` |
 | `check.sh` | agents, humans, CI | Runs format → lint → typecheck → test → build; skips empty; writes `.agent-logs/.verified` hash on success. Exit 0 pass, 1 fail, 3 nothing configured |
-| `run-issue.sh <N> [--watch]` | human (local) | Fetches the issue with `gh`; creates worktree + `agent/issue-N-<slug>` from `origin/<base>`; launches Copilot with `--agent factory` |
+| `run-issue.sh <N> [--watch]` | human (local) | Fetches the issue with `gh`; runs `check-ready.sh`; creates worktree + `agent/issue-N-<slug>` from `origin/<base>`; launches the assistant with the factory agent; shows `questions.md` if the agent stopped at intake, or saves the proposed breakdown to `.agent-work/breakdowns/`. Exit 0 done, 2 no issue, 4 not ready, 5 needs answers, 6 breakdown proposed |
+| `new-draft.sh [--id <slug>] "<brief>"` | human (interactive) | Analyst session in a throwaway worktree; writes `.agent-work/drafts/<id>.md` from your answers only (unanswered → `OPEN:`). Continues an existing draft |
+| `create-issue.sh <draft> [--yes]` | human only (github) | `check-ready`, preview, confirm, `gh issue create --label agent-ready` |
+| `create-task.sh <draft> [--id <slug>] [--yes]` | human only (local) | `check-ready`, preview, confirm, commit `tasks/<id>.md` on the base branch |
+| `create-issues.sh <breakdown> \| --from-pr <N> \| --from-issue <N> [--parent <N>] [--yes]` | human only (github) | `check-breakdown`, preview, confirm; creates the sub-issues in dependency order, links them as native sub-issues with blocked-by dependencies, comments on the parent. See [breakdown.md](breakdown.md) |
+| `create-tasks.sh <breakdown> [--yes]` | human only (local) | `check-breakdown`, preview, confirm; commits `tasks/<parent>.<n>.md` and a "Broken down into" list in the parent task |
+| `run-batch.sh <parent> [--auto-continue] [--list] [--parallel <n>]` | human | Runs the ready sub-issues / sub-tasks of a breakdown in dependency order, up to `MAX_PARALLEL` at once, each as its own `run-issue` / `run-task`; `--auto-continue` starts the next ones as you merge. See [breakdown.md](breakdown.md#running-the-items-run-batch) |
+| `complexity.env` | human edits | Limits that make an issue too big for one run. See [breakdown.md](breakdown.md) |
+| `check-complexity.sh <plan> <brief>` / `--diff <base> [<head>]` | factory agent, CI `size` job, `accept.sh` | Measures a plan (or a real diff) against `complexity.env`. Exit 0 within limits, 6 too complex, 4 plan malformed |
+| `check-breakdown.sh <breakdown> [brief] [--split <dir>]` | factory agent, create-issues, create-tasks | Items ready, numbered, dependencies valid and acyclic, parent ACs covered. Exit 0 valid, 4 invalid |
+| `check-ready.sh <file>` | run-issue, run-task, human | Deterministic readiness gate: Goal, ≥1 acceptance criterion, Out of scope, Risk (low/medium/high) filled in, nothing marked `OPEN:`. Exit 0 ready, 4 not ready |
 | `test-hooks.sh` | human, CI | Runs every case in `hook-cases.txt` plus payload-shape, stop-gate, logging and redaction checks in a throwaway repo (39 for github/linux) |
 | `hook-cases.txt` | human edits | Guard test cases: `<allow\|deny> <sh\|view\|edit\|create> <description> :: <argument>`, `@checkout <branch>` |
 
@@ -21,7 +31,7 @@ Repo-type and OS pieces in the installed tree: `.github/hooks/policy/git-rules.e
 | File | Purpose |
 |---|---|
 | `copilot-setup-steps.yml` | Prepares the cloud agent environment. Single job named `copilot-setup-steps`; only `steps`, `permissions`, `runs-on`, `services`, `snapshot`, `timeout-minutes` (≤ 59) are honoured; used only from the default branch. Runs `setup.sh` |
-| `ci.yml` | Jobs `verify` (setup + `check.sh`), `hooks-selftest`, `guardrails-unchanged` (agent/copilot branches only) |
+| `ci.yml` | Jobs `verify` (setup + `check.sh`), `hooks-selftest`, `guardrails-unchanged` and `size` (agent branches only; `size` runs the base branch's `check-complexity.sh --diff`) |
 
 ## Hook events (`.github/hooks/factory.json`)
 

@@ -19,7 +19,11 @@ There is no remote, pull request, or CI. The deliverable is the committed `agent
 
 ## Handoff body
 ```markdown
-Status: READY | DRAFT   (DRAFT when risk is high, verification failed, or blocking questions remain)
+Status: READY | DRAFT | NEEDS-INPUT | BREAKDOWN
+        (DRAFT: risk is high or verification failed. NEEDS-INPUT: intake wrote questions.md; nothing was
+         planned or changed — put the questions under Summary and stop. BREAKDOWN: the work exceeded the
+         complexity limits; nothing was implemented — point to breakdown.md under Summary and stop;
+         the human creates the tasks with create-tasks.sh.)
 Task: <id>
 Branch: agent/<id>
 
@@ -33,8 +37,8 @@ Branch: agent/<id>
 ## Verification
 `scripts/factory/check.sh` — passed | failed (<which check>)
 
-## Assumptions
-- A1 ...
+## Decisions
+- <implementation choices made from the code base (not requirements); see decisions.md>
 
 ## Risks / follow-ups
 - ...
