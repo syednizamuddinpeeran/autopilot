@@ -1,0 +1,19 @@
+# This repository's own guard: extended regexes matched against file paths in edit/create/view
+# tool arguments. "write:" blocks only writes; otherwise reads are blocked too.
+
+# Secrets: never read or write
+(^|/)\.env(\..*)?$
+id_rsa|id_ed25519|\.pem$|\.p12$|\.pfx$
+(^|/)\.ssh/
+\.aws/credentials
+(^|/)\.(npmrc|pypirc|netrc|git-credentials)$
+
+# This repo's harness, its CI and its license: humans change these.
+# (The template's own files under template/ stay editable; that is the work.)
+write:^\.github/hooks/
+write:^\.github/workflows/
+write:^\.claude/settings\.json$
+write:^CLAUDE\.md$
+write:^LICENSE$
+write:\.agent-logs/
+write:\.git/

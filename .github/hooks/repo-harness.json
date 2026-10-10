@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/scripts/log.sh sessionStart",
+        "powershell": "pwsh -NoProfile -ExecutionPolicy Bypass -File .github/hooks/scripts/log.ps1 sessionStart",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "userPromptSubmitted": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/scripts/log.sh userPromptSubmitted",
+        "powershell": "pwsh -NoProfile -ExecutionPolicy Bypass -File .github/hooks/scripts/log.ps1 userPromptSubmitted",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/scripts/guard.sh",
+        "powershell": "pwsh -NoProfile -ExecutionPolicy Bypass -File .github/hooks/scripts/guard.ps1",
+        "cwd": ".",
+        "timeoutSec": 15
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/scripts/log.sh postToolUse",
+        "powershell": "pwsh -NoProfile -ExecutionPolicy Bypass -File .github/hooks/scripts/log.ps1 postToolUse",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "postToolUseFailure": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/scripts/log.sh postToolUseFailure",
+        "powershell": "pwsh -NoProfile -ExecutionPolicy Bypass -File .github/hooks/scripts/log.ps1 postToolUseFailure",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "subagentStart": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/scripts/log.sh subagentStart",
+        "powershell": "pwsh -NoProfile -ExecutionPolicy Bypass -File .github/hooks/scripts/log.ps1 subagentStart",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "subagentStop": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/scripts/log.sh subagentStop",
+        "powershell": "pwsh -NoProfile -ExecutionPolicy Bypass -File .github/hooks/scripts/log.ps1 subagentStop",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "preCompact": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/scripts/log.sh preCompact",
+        "powershell": "pwsh -NoProfile -ExecutionPolicy Bypass -File .github/hooks/scripts/log.ps1 preCompact",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "errorOccurred": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/scripts/log.sh errorOccurred",
+        "powershell": "pwsh -NoProfile -ExecutionPolicy Bypass -File .github/hooks/scripts/log.ps1 errorOccurred",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "sessionEnd": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/scripts/log.sh sessionEnd",
+        "powershell": "pwsh -NoProfile -ExecutionPolicy Bypass -File .github/hooks/scripts/log.ps1 sessionEnd",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}
