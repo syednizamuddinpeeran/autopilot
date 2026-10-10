@@ -99,7 +99,9 @@ for i in "${order[@]}"; do
       printf '%s\n' "$line"
     done
   } > "$body"
-  if ! url="$(gh issue create --title "$title" --body-file "$body" --label agent-ready 2>/dev/null)"; then
+  # Only unblocked items get `agent-ready` (it starts the Claude action): label the others when their
+  # blockers are merged (run-batch.sh --list shows which are ready).
+  if [[ -s "$items/$i.deps" ]] || ! url="$(gh issue create --title "$title" --body-file "$body" --label agent-ready 2>/dev/null)"; then
     url="$(gh issue create --title "$title" --body-file "$body")"
   fi
   num[$i]="${url##*/}"
@@ -121,5 +123,6 @@ gh issue comment "$parent" --body "Broken down into ${#order[@]} sub-issues (scr
 $summary
 Each runs as its own factory run once the issues it is blocked by are merged." >/dev/null || true
 echo
-echo "Done. Run them in dependency order: scripts/factory/run-issue.sh <N> for each,"
-echo "or assign the unblocked ones to the cloud agent."
+echo "Done. Run them locally in dependency order:  scripts/factory/run-batch.sh $parent [--auto-continue]"
+echo "or assign the unblocked ones to the cloud agent. Only unblocked sub-issues got the agent-ready label;"
+echo "add it to the others when their blockers are merged."

@@ -12,7 +12,7 @@ id_rsa|id_ed25519|\.pem$|\.p12$|\.pfx$
 write:\.github/hooks/
 write:scripts/factory/check(-ready|-complexity|-breakdown)?\.(sh|ps1)
 write:scripts/factory/complexity\.env
-write:scripts/factory/(new-draft|create-issues?|create-tasks?|agent-cli)\.(sh|ps1)
+write:scripts/factory/(new-draft|create-issues?|create-tasks?|run-batch|agent-cli)\.(sh|ps1)
 write:scripts/factory/commands\.env
 write:\.agent-logs/
 write:\.git/

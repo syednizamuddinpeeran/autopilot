@@ -22,8 +22,8 @@
 \bgit\s+(filter-branch|filter-repo)\b
 \bgit\s+config\s+(--global|--system)\b
 
-# --- Human-only steps: drafting and creating issues / tasks ---
-\b(new-draft|create-issues?|create-tasks?)\.(sh|ps1)\b
+# --- Human-only steps: drafting and creating issues / tasks, batch runs (they start more agents) ---
+\b(new-draft|create-issues?|create-tasks?|run-batch)\.(sh|ps1)\b
 
 # --- Cloud / infra changes (agents never deploy) ---
 \bterraform\s+(apply|destroy|import|state)\b

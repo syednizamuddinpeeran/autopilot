@@ -35,6 +35,8 @@ foreach ($repo in (Get-ChildItem (Join-Path $root 'template/repo') -Directory).N
     $launcher = if ($repo -eq 'local') { 'scripts/factory/run-task.ps1' } else { 'scripts/factory/run-issue.ps1' }
     & pwsh -NoProfile -File $launcher *> $null
     if ($LASTEXITCODE -ne 2) { throw "$launcher without input: want exit 2, got $LASTEXITCODE" }
+    & pwsh -NoProfile -File scripts/factory/run-batch.ps1 *> $null
+    if ($LASTEXITCODE -ne 2) { throw "run-batch.ps1 without input: want exit 2, got $LASTEXITCODE" }
     & pwsh -NoProfile -File scripts/factory/check.ps1 *> $null; if ($LASTEXITCODE -ne 3) { throw 'check.ps1 should exit 3 with no checks' }
     (Get-Content scripts/factory/commands.env) -replace '^ALLOW_NO_CHECKS=0', 'ALLOW_NO_CHECKS=1' | Set-Content scripts/factory/commands.env
     & pwsh -NoProfile -File scripts/factory/setup.ps1 | Out-Null; if ($LASTEXITCODE -ne 0) { throw 'setup.ps1 failed' }

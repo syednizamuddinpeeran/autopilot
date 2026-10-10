@@ -13,7 +13,7 @@ check() { # check <description> <want> <got>
   if [[ "$2" == "$3" ]]; then echo "ok   $1"; else echo "FAIL $1 (want $2, got $3)"; fail=1; fi
 }
 
-tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+tmp="${KEEP_TMP:-$(mktemp -d)}"; [[ -n "${KEEP_TMP:-}" ]] || trap 'rm -rf "$tmp"' EXIT
 bin="$tmp/bin"; mkdir -p "$bin"
 # Fake agent CLI: records that it ran; writes questions.md when FAKE_AGENT=questions.
 cat > "$bin/copilot" <<'SH'
@@ -28,6 +28,9 @@ echo ran >> "$FAKE_LOG"
 if [[ "${FAKE_AGENT:-}" == questions ]]; then
   d="$(ls -d .agent-work/*/ | head -1)"
   printf '1. Which columns are exported? — Why it matters: changes the CSV header.\n' > "${d}questions.md"
+fi
+if [[ "${FAKE_AGENT:-}" == commit ]]; then
+  echo "$PWD" > "work-$(basename "$PWD").txt" && git add work-*.txt && git commit -qm "feat: fake work"
 fi
 if [[ "${FAKE_AGENT:-}" == breakdown ]]; then
   d="$(ls -d .agent-work/*/ | head -1)"
@@ -50,6 +53,10 @@ elif [[ "$1 $2" == "issue comment" ]]; then
   printf '%s\n' "$@" > "$FAKE_GH_COMMENT"
 elif [[ "$1 $2" == "pr view" ]]; then
   jq -n --arg b "$(cat "$FAKE_PR_BODY")" --arg h "$FAKE_PR_HEAD" '{body: $b, headRefName: $h, author: {login: "Copilot"}, url: "https://example.test/pull/9"}'
+elif [[ "$1" == api && "$2" == */sub_issues ]]; then
+  cat "$FAKE_SUBS"          # already in the --jq output form: "<number> <state>"
+elif [[ "$1" == api && "$2" == */dependencies/blocked_by ]]; then
+  n="${2%/dependencies/blocked_by}"; cat "$FAKE_BLOCKED.${n##*/}" 2>/dev/null || true   # "#<number>" of open blockers
 elif [[ "$1" == api ]]; then
   echo "${*:2}" >> "$FAKE_GH_API"
   # GET repos/{owner}/{repo}/issues/N --jq .id → a fake issue id (1000 + N)
@@ -134,6 +141,31 @@ check "local: create-tasks refuses to create twice" 1 "$rc"
 bash scripts/factory/create-tasks.sh "$bd/bad-cycle.md" --yes >/dev/null 2>&1; rc=$?
 check "local: create-tasks refuses an invalid breakdown" 4 "$rc"
 
+# local: run the sub-tasks in dependency order (run-batch)
+export BATCH_STAGGER_SECONDS=0 BATCH_POLL_SECONDS=1
+out="$(bash scripts/factory/run-batch.sh t1 --list 2>&1)"
+grep -qE "t1\.1 +ready" <<<"$out" && grep -qE "t1\.3 +blocked by: t1\.1 t1\.2" <<<"$out" || { echo "FAIL local: run-batch --list states wrong"; echo "$out"; fail=1; }
+out="$(FAKE_AGENT=commit bash scripts/factory/run-batch.sh t1 2>&1)"; rc=$?
+check "local: run-batch runs the unblocked sub-task" 0 "$rc"
+grep -q "start    t1.1" <<<"$out" && ! grep -q "start    t1.2" <<<"$out" || { echo "FAIL local: run-batch started the wrong sub-tasks"; echo "$out"; fail=1; }
+grep -qE "t1\.1 +waiting for your review" <<<"$out" || { echo "FAIL local: finished sub-task not waiting for review"; fail=1; }
+# --auto-continue: a stand-in for the human merges each finished branch; the batch starts what that unblocks.
+( for _ in $(seq 1 120); do
+    for b in $(git for-each-ref --format='%(refname:short)' 'refs/heads/agent/t1.*'); do
+      id="${b#agent/}"
+      git log --format=%s main | grep -qxF "merge: $id" && continue
+      [[ "$(git rev-list --count "main..$b")" -gt 0 ]] && git merge -q --no-ff "$b" -m "merge: $id"
+    done
+    sleep 1
+  done ) >/dev/null 2>&1 &
+merger=$!
+out="$(FAKE_AGENT=commit timeout 120 bash scripts/factory/run-batch.sh t1 --auto-continue 2>&1)"; rc=$?
+kill "$merger" 2>/dev/null; wait "$merger" 2>/dev/null
+check "local: run-batch --auto-continue finishes" 0 "$rc"
+grep -q "All sub-tasks of t1 are merged" <<<"$out" || { echo "FAIL local: auto-continue did not run every sub-task"; echo "$out"; fail=1; }
+[[ "$(grep -c '^start' <<<"$out")" == 2 ]] || { echo "FAIL local: auto-continue should start t1.2 and t1.3"; fail=1; }
+check "local: run-batch with no sub-tasks" 2 "$(bash scripts/factory/run-batch.sh nope >/dev/null 2>&1; echo $?)"
+
 # ---- github repo ----
 setup_repo github "$tmp/gh"
 git init -q --bare "$tmp/origin.git" && git remote add origin "$tmp/origin.git" && git push -q origin main 2>/dev/null
@@ -181,6 +213,7 @@ for want in "issues/7/sub_issues -F sub_issue_id=1009" "issues/7/sub_issues -F s
   grep -q -- "$want" "$FAKE_GH_API" || { echo "FAIL github: missing gh api call: $want"; fail=1; }
 done
 grep -qx "Depends on: #9, #10" "$FAKE_GH_CREATE.body.11" || { echo "FAIL github: sub-issue dependencies not rewritten"; fail=1; }
+grep -qx "agent-ready" "$FAKE_GH_CREATE" && { echo "FAIL github: blocked sub-issue got the agent-ready label"; fail=1; }
 grep -qx "Parent: #7" "$FAKE_GH_CREATE.body.9" || { echo "FAIL github: sub-issue parent missing"; fail=1; }
 grep -qx "7" "$FAKE_GH_COMMENT" || { echo "FAIL github: summary not commented on the parent"; fail=1; }
 export FAKE_PR_BODY="$bd/ok.md" FAKE_PR_HEAD="feature/x"
@@ -188,6 +221,19 @@ bash scripts/factory/create-issues.sh --from-pr 9 --yes >/dev/null 2>&1; rc=$?
 check "github: create-issues --from-pr refuses a non-agent branch" 1 "$rc"
 bash scripts/factory/create-issues.sh "$bd/bad-cycle.md" --parent 7 --yes >/dev/null 2>&1; rc=$?
 check "github: create-issues refuses an invalid breakdown" 4 "$rc"
+
+# github: run the sub-issues whose blockers are closed (run-batch)
+export FAKE_SUBS="$tmp/subs" FAKE_BLOCKED="$tmp/blocked" FAKE_ISSUE_BODY="$fx/ok-issue-form.md"
+printf '9 open\n10 open\n11 open\n' > "$FAKE_SUBS"; echo "#9" > "$FAKE_BLOCKED.10"; printf '#9\n#10\n' > "$FAKE_BLOCKED.11"
+out="$(bash scripts/factory/run-batch.sh 7 --list 2>&1)"
+grep -qE "#9 +ready" <<<"$out" && grep -qE "#11 +blocked by: #9 #10" <<<"$out" || { echo "FAIL github: run-batch --list states wrong"; echo "$out"; fail=1; }
+out="$(bash scripts/factory/run-batch.sh 7 2>&1)"; rc=$?
+check "github: run-batch runs the unblocked sub-issue" 0 "$rc"
+grep -q "start    #9" <<<"$out" && ! grep -q "start    #10" <<<"$out" || { echo "FAIL github: run-batch started the wrong sub-issues"; echo "$out"; fail=1; }
+[[ -d "$tmp/gh-worktrees/issue-9" ]] || { echo "FAIL github: sub-issue 9 did not get its own worktree"; fail=1; }
+printf '9 closed\n10 closed\n11 closed\n' > "$FAKE_SUBS"
+out="$(bash scripts/factory/run-batch.sh 7 2>&1)"; rc=$?
+grep -q "All sub-issues of #7 are closed" <<<"$out" || { echo "FAIL github: closed sub-issues not recognised"; fail=1; }
 
 [[ $fail -eq 0 ]] && echo "launcher flow: all passed"
 exit $fail
