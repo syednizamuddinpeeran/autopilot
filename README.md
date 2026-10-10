@@ -1,4 +1,4 @@
-# Autopilot — Agent Factory Template
+# autocode-harness — AI coding-agent harness
 
 Reusable setup that takes a piece of work — a GitHub issue or a local task file — to a verified, reviewed change, with coding agents running autonomously inside guardrails and every action logged. A human always merges.
 

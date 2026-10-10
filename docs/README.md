@@ -1,4 +1,4 @@
-# Agent Factory — Documentation
+# autocode-harness — Documentation
 
 A GitHub issue (or a local task file) goes in; a verified, reviewed change comes out. A human merges it. Runs with GitHub Copilot or Claude Code, in the cloud or locally on Linux, WSL or Windows.
 
