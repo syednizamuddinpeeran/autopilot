@@ -1,0 +1,36 @@
+# This repository's own guard (not installed into other repos; the template's policy is under
+# template/). Extended regexes, case-insensitive, matched against every shell command an agent runs.
+# A match = the command is denied. Agents cannot edit this file (deny-paths.txt).
+
+# --- Destructive filesystem ---
+\brm\s+(-[a-z]*\s+)*(/|~|\$HOME|/\*|\.\.)(\s|$)
+\bmkfs\b
+\bdd\s+if=.*of=/dev/
+
+# --- Privilege escalation / remote code ---
+\bsudo\b
+\bchmod\s+(-R\s+)?777\b
+\b(curl|wget)\b[^|]*\|\s*(sudo\s+)?(ba|z|)sh\b
+\bbash\s+<\(\s*(curl|wget)
+
+# --- Git history and review safety ---
+\bgit\s+push\b.*(\s--force(-with-lease)?\b|\s-f\b|\s\+\S)
+\bgit\s+(filter-branch|filter-repo)\b
+\bgit\s+config\s+(--global|--system)\b
+--no-verify\b
+\bgit\s+(branch\s+-D|push\s+\S+\s+--delete|push\s+\S+\s+:)\s*(main|master)\b
+
+# --- GitHub: merging to main, repo settings and deletions stay human ---
+\bgh\s+pr\s+merge\b
+\bgh\s+repo\s+(delete|edit|rename|archive)\b
+\bgh\s+api\b.*(-X|--method)\s*DELETE\b
+\bgh\s+(secret|variable|ruleset)\b
+
+# --- Secret access ---
+\b(cat|less|more|head|tail|bat|nl|strings|xxd|grep|awk|sed|cp|scp)\b[^|;&]*(\.env(\.|\s|$)|id_rsa|id_ed25519|\.ssh/|\.aws/credentials|\.npmrc|\.pypirc|\.netrc|\.git-credentials)
+^\s*(env|printenv|set)\s*$
+\bprintenv\b.*(TOKEN|SECRET|KEY|PASSWORD)
+\becho\s+.*\$\{?[A-Z_]*(TOKEN|SECRET|PASSWORD|API_KEY)
+
+# --- Audit log tampering ---
+(\brm\b|\bmv\b|\btruncate\b|\bshred\b|sed\s+-i|>\s*)[^|;&]*\.agent-logs
