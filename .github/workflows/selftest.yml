@@ -22,6 +22,7 @@ jobs:
       - run: pwsh --version
       - run: bash tests/install-matrix.sh
       - run: bash tests/installer-parity.sh
+      - run: bash tests/launcher-flow.sh
 
   windows:
     # Native Windows: install.ps1 and the PowerShell hooks/scripts.

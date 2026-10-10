@@ -21,6 +21,8 @@ body:
     id: out_of_scope
     attributes:
       label: Out of scope
+      description: What must not change. Write "None" if nothing.
+    validations: { required: true }
   - type: textarea
     id: pointers
     attributes:

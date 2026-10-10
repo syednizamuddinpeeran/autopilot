@@ -9,7 +9,6 @@
 - Given <context>, when <action>, then <observable result>
 
 ## Out of scope
-<What must not change. Write "None" if nothing.>
 
 ## Pointers
 <Relevant files, modules, examples to follow.>

@@ -3,6 +3,8 @@
 | Symptom | Cause | Fix |
 |---|---|---|
 | `Missing: gh/copilot/jq/git` | Tool not installed | Install it (see usage-guide) |
+| `Not ready for the factory` (exit 4) | Goal, Acceptance criteria, Out of scope or Risk missing, or a template placeholder / `OPEN:` left in | Fill in the issue (or `tasks/<id>.md` and commit it) and run again |
+| `The agent needs answers` (exit 5) | Intake found the requirements unclear and wrote `questions.md`; nothing was implemented | Answer the questions in the issue / task file and run again |
 | `No checks configured` (exit 3) | All commands empty in `commands.env` | Configure them, or `ALLOW_NO_CHECKS=1` for docs-only repos |
 | Copilot rejects flags | CLI flag names changed | `copilot help permissions`; adjust `run-issue.sh` (human edit) |
 | Cloud agent can't build/test | Runtime missing in its environment | Uncomment the runtime in `copilot-setup-steps.yml`; the job must be named `copilot-setup-steps` and the file must be on the default branch |

@@ -8,7 +8,8 @@
 | `agent-cli.sh` / `.ps1` | run-issue, run-task | Starts `copilot` or `claude` with the factory agent and CLI-level denies, per `ASSISTANT` |
 | `setup.sh` | run-issue, setup job, CI, agents | Requires `git`, `jq`; `chmod +x` scripts; creates `.agent-logs`, `.agent-work`; runs `SETUP_CMD` |
 | `check.sh` | agents, humans, CI | Runs format → lint → typecheck → test → build; skips empty; writes `.agent-logs/.verified` hash on success. Exit 0 pass, 1 fail, 3 nothing configured |
-| `run-issue.sh <N> [--watch]` | human (local) | Fetches the issue with `gh`; creates worktree + `agent/issue-N-<slug>` from `origin/<base>`; launches Copilot with `--agent factory` |
+| `run-issue.sh <N> [--watch]` | human (local) | Fetches the issue with `gh`; runs `check-ready.sh`; creates worktree + `agent/issue-N-<slug>` from `origin/<base>`; launches the assistant with the factory agent; shows `questions.md` if the agent stopped at intake. Exit 0 done, 2 no issue, 4 not ready, 5 needs answers |
+| `check-ready.sh <file>` | run-issue, run-task, human | Deterministic readiness gate: Goal, ≥1 acceptance criterion, Out of scope, Risk (low/medium/high) filled in, nothing marked `OPEN:`. Exit 0 ready, 4 not ready |
 | `test-hooks.sh` | human, CI | Runs every case in `hook-cases.txt` plus payload-shape, stop-gate, logging and redaction checks in a throwaway repo (39 for github/linux) |
 | `hook-cases.txt` | human edits | Guard test cases: `<allow\|deny> <sh\|view\|edit\|create> <description> :: <argument>`, `@checkout <branch>` |
 

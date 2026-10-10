@@ -2,7 +2,7 @@
 # Starts the coding assistant this repo was installed for (ASSISTANT in commands.env) with the
 # factory agent. Sourced by run-issue.sh / run-task.sh.
 #
-#   agent_cli <auto|--watch> <prompt> <shell command to deny>...
+#   agent_cli <auto|--watch> <prompt> <shell command to deny>...     # returns the CLI's exit code
 #
 # The deny list is an extra CLI-level layer; the preToolUse guard hook enforces the full policy.
 # Flag names can change between CLI versions: check `copilot help permissions` / `claude --help`.
@@ -32,10 +32,10 @@ agent_cli() {
       if [[ "$mode" == "--watch" ]]; then
         echo "Starting interactive session. Paste this, then switch to autopilot (Shift+Tab or /autopilot):"
         echo "----"; echo "$prompt"; echo "----"
-        exec copilot --agent factory "${flags[@]}"
+        copilot --agent factory "${flags[@]}"; return
       fi
       # shellcheck disable=SC2086  # COPILOT_EXTRA_FLAGS is a list of flags
-      exec copilot --agent factory -p "$prompt" --allow-all-tools "${flags[@]}" ${COPILOT_EXTRA_FLAGS:-}
+      copilot --agent factory -p "$prompt" --allow-all-tools "${flags[@]}" ${COPILOT_EXTRA_FLAGS:-}
       ;;
     claude-code)
       command -v claude >/dev/null || { echo "Missing: claude" >&2; exit 1; }
@@ -44,10 +44,10 @@ agent_cli() {
       if [[ "$mode" == "--watch" ]]; then
         echo "Starting interactive session. Paste this, then pick a permission mode (Shift+Tab):"
         echo "----"; echo "$prompt"; echo "----"
-        exec claude --agent factory --disallowedTools "${flags[@]}"
+        claude --agent factory --disallowedTools "${flags[@]}"; return
       fi
       # shellcheck disable=SC2086  # CLAUDE_EXTRA_FLAGS is a list of flags
-      exec claude --agent factory --permission-mode bypassPermissions --disallowedTools "${flags[@]}" \
+      claude --agent factory --permission-mode bypassPermissions --disallowedTools "${flags[@]}" \
         ${CLAUDE_EXTRA_FLAGS:-} -p "$prompt"
       ;;
     *) echo "Unknown ASSISTANT in commands.env: ${ASSISTANT}" >&2; exit 1 ;;

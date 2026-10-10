@@ -15,7 +15,8 @@ This repository is local: there is no remote, GitHub issue, or pull request.
 ## Steps
 
 1. **Intake** — load the `task-intake` skill. Write `W/brief.md`.
-   If there are no testable acceptance criteria, derive them and mark them as assumptions.
+   If the skill wrote `W/questions.md` instead (the task is not clear enough), skip straight to
+   step 6 and write a NEEDS-INPUT handoff: no plan, no code, no assumptions.
 
 2. **Plan** — invoke the `planner` agent with: "Plan task ID. Brief: W/brief.md. Write W/plan.md."
    Read only the task list from `W/plan.md` afterwards.
@@ -37,5 +38,8 @@ This repository is local: there is no remote, GitHub issue, or pull request.
 ## Rules
 - Follow AGENTS.md hard rules at all times.
 - Keep a running log of decisions in `W/decisions.md` (one line each).
-- Never ask the user questions mid-run; record assumptions and continue.
+- Never guess requirements. Unclear requirements are questions for the human (`W/questions.md`, then
+  a NEEDS-INPUT handoff), never assumptions. Implementation choices the code base settles are
+  decisions: log them in `W/decisions.md`.
+- Never ask the user questions mid-run in any other way; the run is non-interactive.
 - Stop and write a DRAFT handoff if the work needs secrets, infra changes, or edits to `.github/hooks`.

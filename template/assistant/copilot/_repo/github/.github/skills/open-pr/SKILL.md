@@ -5,6 +5,13 @@ description: Push the branch and open or update the pull request with the standa
 
 # Open the pull request
 
+## NEEDS-INPUT mode (intake wrote `questions.md`)
+Nothing was planned or changed, so there is nothing to push.
+- **Local CLI**: stop. Do not push or open a PR. `run-issue.sh` shows `.agent-work/issue-N/questions.md`
+  to the human and offers to post it on the issue.
+- **Cloud agent**: do not commit code. Put the contents of `questions.md` in your final message (the PR
+  description of your draft PR), titled `Questions: <issue title>`, and stop.
+
 ## Preconditions
 - `verify-changes` passed in this session (unless opening a draft for a blocked run).
 - Branch is `agent/issue-N-*` (local) or `copilot/*` (cloud). Never `main`.
@@ -34,8 +41,8 @@ Closes #N
 ## Verification
 `scripts/factory/check.sh` — passed | failed (<which check>)
 
-## Assumptions
-- A1 ...
+## Decisions
+- <implementation choices made from the code base (not requirements); see decisions.md>
 
 ## Risks / follow-ups
 - ...
