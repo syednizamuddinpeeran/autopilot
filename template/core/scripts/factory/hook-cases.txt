@@ -26,3 +26,5 @@ deny  edit edit git rules       :: .github/hooks/policy/git-rules.env
 deny  view view .env            :: .env
 deny  view view abs ssh key     :: /root/.ssh/id_ed25519
 deny  edit edit readiness check   :: scripts/factory/check-ready.sh
+deny  sh   run new-draft          :: bash scripts/factory/new-draft.sh "add export"
+deny  edit edit agent launcher     :: scripts/factory/agent-cli.sh

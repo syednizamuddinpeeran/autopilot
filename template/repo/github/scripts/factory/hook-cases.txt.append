@@ -13,3 +13,7 @@ deny  create create workflow       :: .github/workflows/evil.yml
 @checkout main
 deny  sh     push from main branch :: git push -u origin HEAD
 @checkout -
+deny  sh     create issue script    :: bash scripts/factory/create-issue.sh .agent-work/drafts/x.md --yes
+deny  sh     gh issue create        :: gh issue create --title x --body y
+deny  sh     gh issue comment       :: gh issue comment 7 --body hi
+allow sh     gh issue view          :: gh issue view 7 --comments

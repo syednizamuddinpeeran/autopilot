@@ -43,7 +43,19 @@ git add -A && git commit -m "chore: add agent factory" && git push
 
 ## 5. Create an issue
 
-Use the **Agent task** form: Goal, Acceptance criteria (Given/when/then — make them automatically testable), Out of scope (or "None"), Pointers, Risk. It applies the `agent-ready` label.
+**Recommended: draft it with the analyst.**
+```bash
+scripts/factory/new-draft.sh "add CSV export to the reports page"
+```
+This opens an interactive session with the `analyst` agent. It asks you, one topic at a time: who the user is and what they get, testable acceptance criteria with concrete values, edge cases, what is out of scope, data and security impact, risk. It writes only what you answer: anything unanswered becomes an `OPEN:` line, and it records each question with your answer under *Decisions made while drafting*, so you can see exactly what you asked for. It runs in a throwaway worktree and cannot change code or create anything.
+
+Review and edit `.agent-work/drafts/<id>.md`, then create the issue yourself:
+```bash
+scripts/factory/create-issue.sh .agent-work/drafts/<id>.md      # preview → confirm → gh issue create
+```
+It refuses drafts that are not ready (OPEN items, missing sections, placeholders), uses your `gh` credentials, and adds the `agent-ready` label. Agents are denied `new-draft`, `create-issue` and `gh issue` writes by the guard.
+
+**Or write it by hand** with the **Agent task** form: Goal, Acceptance criteria (Given/when/then — make them automatically testable), Out of scope (or "None"), Pointers, Risk. It applies the `agent-ready` label.
 
 The factory never guesses requirements:
 - `run-issue.sh` first runs `scripts/factory/check-ready.sh` on the issue body. If Goal, Acceptance criteria, Out of scope or Risk is missing or still a placeholder, it lists what to fix and exits (code 4) **before any agent starts**. Run it with no issue number and it tells you how to create one (code 2).
